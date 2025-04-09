@@ -37,8 +37,8 @@ public class StartupListener implements ServletContextListener {
         }
     }
 
-    @Override
+   /** @Override
     public void contextDestroyed(ServletContextEvent sce) {
         // Cleanup if needed
-    }
+    }*/
 }

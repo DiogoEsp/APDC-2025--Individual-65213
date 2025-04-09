@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Welcome Login</title>
+</head>
+<body>
+<h2>Login</h2>
+<form id="loginForm">
+    <label>Username: <input type="text" name="username" required></label><br><br>
+    <label>Password: <input type="password" name="password" required></label><br><br>
+    <button type="submit">Login</button>
+</form>
+<p id="error" style="color:red;"></p>
+
+<script>
+    document.getElementById('loginForm').addEventListener('submit', async function (e) {
+        e.preventDefault();
+
+        const formData = {
+            username: e.target.username.value,
+            password: e.target.password.value
+        };
+
+        const response = await fetch('/rest/login/v2', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(formData)
+        });
+
+        if (response.ok) {
+            const token = await response.json();
+            localStorage.setItem('token', JSON.stringify(token)); // optional: store token
+            window.location.href = 'dashboard.html'; // 🎯 redirect here
+        } else {
+            const errorText = await response.text();
+            document.getElementById('error').innerText = "Login failed: " + errorText;
+        }
+    });
+</script>
+</body>
+</html>

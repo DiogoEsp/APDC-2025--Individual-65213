@@ -12,6 +12,8 @@ public class ChangeRoleData {
 
     public String role;
 
+    public ChangeRoleData(){}
+
     public ChangeRoleData(String user ,String otherUser , String role){
         this.user = user;
         this.role = role;

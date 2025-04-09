@@ -3,22 +3,22 @@ package pt.unl.fct.di.apdc.firstwebapp.resources;
 import com.google.cloud.datastore.*;
 import com.google.gson.Gson;
 import jakarta.ws.rs.*;
+import jakarta.ws.rs.core.Context;
+import jakarta.ws.rs.core.HttpHeaders;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import org.apache.commons.codec.digest.DigestUtils;
-import org.apache.commons.logging.Log;
 import pt.unl.fct.di.apdc.firstwebapp.util.ChangeRoleData;
-import pt.unl.fct.di.apdc.firstwebapp.util.RegisterData;
 
-import javax.print.attribute.standard.Media;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 @Path("/changes")
 @Produces(MediaType.APPLICATION_JSON + ";charset=utf-8")
-public class ChagesResource {
+public class ChangesResource {
 
 
     private static final String PUBLIC = "PUBLIC";
@@ -38,57 +38,82 @@ public class ChagesResource {
 
     private static final DateFormat fmt = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSSZ");
 
-    public ChagesResource() {} //nothing to be done here @GET
+    public ChangesResource() {} //nothing to be done here @GET
+
+    // ========== AUTH TOKEN VALIDATION ==========
+    private Entity validateTokenAndGetUser(String tokenID) {
+        Key tokenKey = datastore.newKeyFactory().setKind("AuthToken").newKey(tokenID);
+        Entity token = datastore.get(tokenKey);
+
+        if (token == null || token.getTimestamp("expiration").toDate().before(new Date())) {
+            return null;
+        }
+
+        Key userKey = datastore.newKeyFactory().setKind("User").newKey(token.getString("username"));
+        return datastore.get(userKey);
+    }
+
 
     @POST
     @Path("/role")
     @Consumes(MediaType.APPLICATION_JSON)
-    public Response changeRole(ChangeRoleData data) {
+    public Response changeRole(@Context HttpHeaders headers, ChangeRoleData data) {
+        //gets the authorization header
+        String authHeader = headers.getHeaderString("Authorization");
 
-        if(data.role == null || !data.validRole()){
-            LOG.info("Null or not valid role");
+        //checks if the authHeader is valid
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            return Response.status(Response.Status.UNAUTHORIZED).build();
+        }
+
+        //cuts the bearer word to get the userId
+        String tokenID = authHeader.substring("Bearer ".length());
+        Entity user = validateTokenAndGetUser(tokenID);
+        if (user == null) {
+            return Response.status(Response.Status.UNAUTHORIZED).entity("Invalid or expired token.").build();
+        }
+
+        if (data.role == null || !data.validRole()) {
+            LOG.info("Invalid role.");
             return Response.status(Response.Status.BAD_REQUEST).build();
         }
 
+        String userRole = user.getString("user_role");
+
+        if (!(userRole.equals(ADMIN) ||
+                (userRole.equals(BACKOFFICE) && (data.role.equalsIgnoreCase(PARTNER) || data.role.equalsIgnoreCase(ENDUSER))))) {
+            return Response.status(Response.Status.FORBIDDEN).build();
+        }
+
         try {
-
-            Key userKey = datastore.newKeyFactory().setKind("User").newKey(data.user);
-
-            Entity user = datastore.get(userKey);
-
-            if (!(user.getString("user_role").equals(ADMIN) ||
-                    (user.getString("user_role").equals(BACKOFFICE) && (data.role.equals(PARTNER) || data.role.equals(ENDUSER))))) {
-                LOG.info("Info user does not have permission for that.");
-                return Response.status(Response.Status.BAD_REQUEST).build();
-            }
-
             Key otherKey = datastore.newKeyFactory().setKind("User").newKey(data.otherUser);
-
             Entity other = datastore.get(otherKey);
 
+            if (other == null) {
+                return Response.status(Response.Status.NOT_FOUND).build();
+            }
 
-            Entity updatedUser = Entity.newBuilder(userKey)
+            Entity updatedUser = Entity.newBuilder(otherKey)
                     .set("user_userName", other.getString("user_userName"))
                     .set("user_name", other.getString("user_name"))
-                    .set("user_pwd", DigestUtils.sha512Hex(other.getString("user_pwd")))
+                    .set("user_pwd", other.getString("user_pwd")) // No need to hash again
                     .set("user_email", other.getString("user_email"))
                     .set("user_profile", other.getString("user_profile"))
                     .set("user_role", data.role.toUpperCase())
-                    .set("user_account_state", DEACTIVATED)
-                    .set("address", EMPTY)
-                    .set("cc", EMPTY)
-                    .set("NIF", EMPTY)
-                    .set("employer", EMPTY)
-                    .set("function", EMPTY).build();
+                    .set("user_account_state", other.getString("user_account_state"))
+                    .set("address", other.getString("address"))
+                    .set("cc", other.getString("cc"))
+                    .set("NIF", other.getString("NIF"))
+                    .set("employer", other.getString("employer"))
+                    .set("function", other.getString("function"))
+                    .build();
 
-            datastore.add(updatedUser);
+            datastore.put(updatedUser);
             return Response.ok().build();
+        } catch (DatastoreException e) {
+            LOG.log(Level.SEVERE, e.toString());
+            return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(e.getReason()).build();
         }
-        catch(DatastoreException e) {
-            LOG.log(Level.ALL, e.toString());
-            return Response.status(Response.Status.BAD_REQUEST).entity(e.getReason()).build();
-        }
-
     }
 
 
@@ -128,7 +153,7 @@ public class ChagesResource {
                     .set("user_profile", other.getString("user_profile"))
                     .set("user_role", other.getString("user_role"))
                     .set("user_account_state", state.toUpperCase())
-                    .set("address", EMPTY)
+                    .set("address", other.getString("address"))
                     .set("cc", EMPTY)
                     .set("NIF", EMPTY)
                     .set("employer", EMPTY)

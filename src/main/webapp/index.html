@@ -1,29 +1,42 @@
 <!DOCTYPE html>
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en">
+
   <head>
+
+
     <meta http-equiv="content-type" content="application/xhtml+xml; charset=UTF-8" />
     <title>ADC: My First Web App</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        background-color: #f4f4f4;
+        text-align: center;
+        margin-top: 100px;
+      }
+      h1 {
+        font-size: 2em;
+        margin-bottom: 30px;
+      }
+      .btn {
+        padding: 12px 24px;
+        margin: 10px;
+        font-size: 1em;
+        cursor: pointer;
+        border: none;
+        border-radius: 8px;
+        background-color: #007bff;
+        color: white;
+        transition: background-color 0.3s ease;
+      }
+      .btn:hover {
+        background-color: #0056b3;
+      }
+    </style>
   </head>
 
   <body>
-    <h1>Welcome to this very simple web application!</h1>
-
-    <table>
-      <tr>
-        <td colspan="2" style="font-weight:bold;">Available Services:</td>        
-      </tr>
-      <tr>
-        <td><a href='https://www.di.fct.unl.pt'>DI-FCT-UNL</a></td><td>(greetings)</td>
-      </tr>
-      <tr>
-        <td><a href='/rest/utils/hello'>Say Hello!</a></td><td>(greetings)</td>
-      </tr>
-      <tr>
-        <td><a href='/rest/utils/time'>What time is it?</a></td><td>(see server time)</td>
-      </tr>
-    </table>
+      <h1>Welcome to this demo</h1>
+      <button class="btn" onclick="window.location.href='login.html'">Login</button>
+      <button class="btn" onclick="window.location.href='register.html'">Register</button>
   </body>
-  <footer>
-  	Copyright: ADC-PEI, FCT NOVA 2025
-  </footer>
 </html>
