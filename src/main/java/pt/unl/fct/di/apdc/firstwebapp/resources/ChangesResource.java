@@ -8,6 +8,7 @@ import jakarta.ws.rs.core.HttpHeaders;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import org.apache.commons.codec.digest.DigestUtils;
+import pt.unl.fct.di.apdc.firstwebapp.util.ChangeAccountStateData;
 import pt.unl.fct.di.apdc.firstwebapp.util.ChangeRoleData;
 
 import java.text.DateFormat;
@@ -120,39 +121,57 @@ public class ChangesResource {
     @POST
     @Path("/accountState/{otherUser}/{state}")
     @Consumes(MediaType.APPLICATION_JSON)
-    public Response changeAccountState(@PathParam("username") String username, @PathParam("state") String state, @PathParam("otherUser") String otherUser){
+    public Response changeAccountState(@Context HttpHeaders headers, ChangeAccountStateData data){
+
+        //gets the authorization header
+        String authHeader = headers.getHeaderString("Authorization");
+
+        //checks if the authHeader is valid
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            return Response.status(Response.Status.UNAUTHORIZED).build();
+        }
+
+        //cuts the bearer word to get the userId
+        String tokenID = authHeader.substring("Bearer ".length());
+        Entity user = validateTokenAndGetUser(tokenID);
+        if (user == null) {
+            return Response.status(Response.Status.UNAUTHORIZED).entity("Invalid or expired token.").build();
+        }
 
 
-        if(state == null || !validState(state)){
+        if(data.state == null || !data.validState()){
             LOG.info("Null or not valid state");
             return Response.status(Response.Status.BAD_REQUEST).build();
         }
 
+        String userRole = user.getString("user_role");
+
+        if (!(userRole.equals(ADMIN) ||
+                (userRole.equals(BACKOFFICE) && (data.state.equalsIgnoreCase(ACTIVATED) || data.state.equalsIgnoreCase(DEACTIVATED))))) {
+            return Response.status(Response.Status.FORBIDDEN).build();
+        }
+
         try {
 
-            Key userKey = datastore.newKeyFactory().setKind("User").newKey(username);
 
-            Entity user = datastore.get(userKey);
 
-            if (!(user.getString("user_role").equals(ADMIN) ||
-                    (user.getString("user_role").equals(BACKOFFICE) && (state.equals(ACTIVATED) || state.equals(DEACTIVATED))))) {
-                LOG.info("Info user does not have permission for that.");
-                return Response.status(Response.Status.BAD_REQUEST).build();
-            }
-
-            Key otherKey = datastore.newKeyFactory().setKind("User").newKey(otherUser);
+            Key otherKey = datastore.newKeyFactory().setKind("User").newKey(data.username);
 
             Entity other = datastore.get(otherKey);
 
+            if(other == null){
+                return Response.status(Response.Status.NOT_FOUND).build();
+            }
 
-            Entity updatedUser = Entity.newBuilder(userKey)
+
+            Entity updatedUser = Entity.newBuilder(otherKey)
                     .set("user_userName", other.getString("user_userName"))
                     .set("user_name", other.getString("user_name"))
                     .set("user_pwd", DigestUtils.sha512Hex(other.getString("user_pwd")))
                     .set("user_email", other.getString("user_email"))
                     .set("user_profile", other.getString("user_profile"))
                     .set("user_role", other.getString("user_role"))
-                    .set("user_account_state", state.toUpperCase())
+                    .set("user_account_state", data.state.toUpperCase())
                     .set("address", other.getString("address"))
                     .set("cc", EMPTY)
                     .set("NIF", EMPTY)
@@ -168,6 +187,8 @@ public class ChangesResource {
             return Response.status(Response.Status.BAD_REQUEST).entity(e.getReason()).build();
         }
     }
+
+
     @POST
     @Path("/remUserAccount/{userName}")
     @Consumes(MediaType.APPLICATION_JSON)
@@ -198,13 +219,5 @@ public class ChangesResource {
     public Response logOut(){
         return Response.ok().build();
     }
-    private boolean validState(String state){
-        String s = state.toUpperCase();
-        return (s.equals(SUSPENDED) || s.equals(ACTIVATED) || s.equals(DEACTIVATED));
-    }
 
-    private boolean validRole(String role){
-        String s = role.toUpperCase();
-        return (s.equals(ADMIN) || s.equals(PARTNER) || s.equals(BACKOFFICE) || s.equals(ENDUSER));
-    }
 }

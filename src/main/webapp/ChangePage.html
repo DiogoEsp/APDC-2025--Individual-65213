@@ -5,7 +5,29 @@
     <title>Title</title>
 </head>
 <body>
-    <h1>Welcome to your dashboard!</h1>
-    <p>You are logged in.</p>
+<h2>Welcome, <span id="userName"></span>!</h2>
+
+<ul>
+    <li><a href="ChangeRole.html">Change Role</a></li>
+    <li><a href="ChangeAccountState.html">Change Account State</a></li>
+    <li><a href="RemoveUser.html">Remove User</a></li>
+    <li><a href="register.html">Register Another User</a></li>
+    <li><a href="Login.html">Log In Again</a></li>
+    <li><a href="#" onclick="logOut()">Log Out</a></li>
+</ul>
+
+<script>
+    if (!sessionStorage.getItem("token")) {
+        window.location.href = "Login.html"; // redirect to login
+    }
+
+    const username = sessionStorage.getItem("username");
+    document.getElementById("userName").textContent = username;
+
+    function logOut() {
+        sessionStorage.clear();
+        window.location.href = "Login.html";
+    }
+</script>
 </body>
 </html>

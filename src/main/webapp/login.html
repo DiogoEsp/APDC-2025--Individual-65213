@@ -22,7 +22,7 @@
             password: e.target.password.value
         };
 
-        const response = await fetch('/rest/login/v2', {
+        const response = await fetch('/rest/login/doLogin', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(formData)
@@ -31,7 +31,7 @@
         if (response.ok) {
             const token = await response.json();
             localStorage.setItem('token', JSON.stringify(token)); // optional: store token
-            window.location.href = 'dashboard.html'; // 🎯 redirect here
+            window.location.href = 'ChangePage.html'; // 🎯 redirect here
         } else {
             const errorText = await response.text();
             document.getElementById('error').innerText = "Login failed: " + errorText;

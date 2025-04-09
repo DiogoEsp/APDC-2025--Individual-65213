@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Registering</title>
+</head>
+
+<body>
+<h2>Register</h2>
+<form id="registerForm">
+    <input type="text" id="username" placeholder="Username" required><br>
+    <input type="password" id="password" placeholder="Password" required><br>
+    <input type="email" id="email" placeholder="Email" required><br>
+    <input type="text" id="name" placeholder="Full Name"><br>
+    <button type="submit">Register</button>
+</form>
+
+<script>
+    document.getElementById("registerForm").addEventListener("submit", async (e) => {
+        e.preventDefault();
+
+        const userData = {
+            username: document.getElementById("username").value,
+            password: document.getElementById("password").value,
+            email: document.getElementById("email").value,
+            name: document.getElementById("name").value
+        };
+
+        const registerResponse = await fetch("/rest/register/registerUser", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(userData)
+        });
+
+        if (registerResponse.ok) {
+            // Now auto-login
+            const loginResponse = await fetch("/rest/login/doLogin", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ username: userData.username, password: userData.password })
+            });
+
+            if (loginResponse.ok) {
+                const data = await loginResponse.json();
+                sessionStorage.setItem("token", data.tokenID);
+                sessionStorage.setItem("username", data.username);
+                window.location.href = "ChangePage.html";
+            } else {
+                alert("Login failed after registration.");
+            }
+        } else {
+            alert("Registration failed.");
+        }
+    });
+</script>
+</body>
+</html>
