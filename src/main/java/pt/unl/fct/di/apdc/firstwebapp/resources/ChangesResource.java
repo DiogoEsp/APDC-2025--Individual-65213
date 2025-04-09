@@ -10,6 +10,7 @@ import jakarta.ws.rs.core.Response;
 import org.apache.commons.codec.digest.DigestUtils;
 import pt.unl.fct.di.apdc.firstwebapp.util.ChangeAccountStateData;
 import pt.unl.fct.di.apdc.firstwebapp.util.ChangeRoleData;
+import pt.unl.fct.di.apdc.firstwebapp.util.RemUserData;
 
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
@@ -119,7 +120,7 @@ public class ChangesResource {
 
 
     @POST
-    @Path("/accountState/{otherUser}/{state}")
+    @Path("/accountState")
     @Consumes(MediaType.APPLICATION_JSON)
     public Response changeAccountState(@Context HttpHeaders headers, ChangeAccountStateData data){
 
@@ -190,15 +191,54 @@ public class ChangesResource {
 
 
     @POST
-    @Path("/remUserAccount/{userName}")
+    @Path("/remUserAccount")
     @Consumes(MediaType.APPLICATION_JSON)
-    public Response removeUserAccount(@PathParam(("userName"))String userName){
+    public Response removeUserAccount(@Context HttpHeaders headers, RemUserData data){
 
-        Key userKey = datastore.newKeyFactory().setKind("User").newKey(userName);
+        //gets the authorization header
+        String authHeader = headers.getHeaderString("Authorization");
 
-        Entity user = datastore.get(userKey);
+        //checks if the authHeader is valid
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            return Response.status(Response.Status.UNAUTHORIZED).build();
+        }
 
-        return Response.ok().build();
+        //cuts the bearer word to get the userId
+        String tokenID = authHeader.substring("Bearer ".length());
+        Entity user = validateTokenAndGetUser(tokenID);
+        if (user == null) {
+            return Response.status(Response.Status.UNAUTHORIZED).entity("Invalid or expired token.").build();
+        }
+
+        String userRole = user.getString("user_role");
+
+        try {
+
+            Key otherKey = datastore.newKeyFactory().setKind("User").newKey(data.other);
+
+            Entity other = datastore.get(otherKey);
+
+            if(other == null){
+                LOG.info("User does not exist.");
+                return Response.status(Response.Status.NOT_FOUND).build();
+            }
+
+            if (!(userRole.equals(ADMIN) ||
+                    userRole.equals(BACKOFFICE) &&
+                            (other.getString("user_role").equals(PARTNER) ||
+                                    other.getString("user_role").equals(ENDUSER)))) {
+                LOG.info("Nonono you dont have permission for that");
+                return Response.status(Response.Status.FORBIDDEN).build();
+            }
+
+            datastore.delete(otherKey);
+            return Response.ok().build();
+
+        }
+        catch(DatastoreException e){
+            LOG.log(Level.ALL, e.toString());
+            return Response.status(Response.Status.BAD_REQUEST).entity(e.getReason()).build();
+        }
     }
 
     @POST
@@ -213,11 +253,30 @@ public class ChangesResource {
     public Response changePassword(){
         return Response.ok().build();
     }
+
+
     @POST
     @Path("/logOut")
     @Consumes(MediaType.APPLICATION_JSON)
-    public Response logOut(){
+    public Response logOut(@HeaderParam("Authorization") String authHeader){
+
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            return Response.status(Response.Status.BAD_REQUEST)
+                    .entity("Missing or invalid Authorization header")
+                    .build();
+        }
+
+        String tokenId = authHeader.substring("Bearer ".length());
+
+        try {
+            Key tokenKey = datastore.newKeyFactory().setKind("AuthToken").newKey(tokenId);
+            datastore.delete(tokenKey);  // This invalidates the token
+            LOG.info("Token invalidated: " + tokenId);
+        } catch (Exception e) {
+            LOG.warning("Failed to invalidate token: " + e.getMessage());
+            return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
+        }
+
         return Response.ok().build();
     }
-
 }

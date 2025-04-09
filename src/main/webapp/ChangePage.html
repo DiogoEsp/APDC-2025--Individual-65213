@@ -2,32 +2,91 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Title</title>
+    <title>Change List</title>
+
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+        }
+
+        .navbar {
+            background-color: #333;
+            overflow: hidden;
+            padding: 0 20px;
+        }
+
+        .navbar a {
+            float: left;
+            display: block;
+            color: #f2f2f2;
+            text-align: center;
+            padding: 16px 20px;
+            text-decoration: none;
+            transition: background 0.3s;
+        }
+
+        .navbar a:hover {
+            background-color: #575757;
+        }
+
+        .navbar .right {
+            float: right;
+        }
+
+        .welcome {
+            padding: 20px;
+            font-size: 18px;
+        }
+    </style>
 </head>
 <body>
-<h2>Welcome, <span id="userName"></span>!</h2>
+<div class="navbar">
+    <a href="index.html"> Welcome Page</a>
+    <a href="ChangeRole.html">Change Role</a>
+    <a href="ChangeAccountState.html">Change Account State</a>
+    <a href="RemoveUser.html">Remove User</a>
+    <a href="ListUsers.html">List Users</a>
+    <a href="changeAtribs.html">Change Information</a>
+    <a href="ChangePwd.html">Change Password</a>
+    <a href="#" class="right" onclick="logOut()">Log Out</a>
+</div>
 
-<ul>
-    <li><a href="ChangeRole.html">Change Role</a></li>
-    <li><a href="ChangeAccountState.html">Change Account State</a></li>
-    <li><a href="RemoveUser.html">Remove User</a></li>
-    <li><a href="register.html">Register Another User</a></li>
-    <li><a href="Login.html">Log In Again</a></li>
-    <li><a href="#" onclick="logOut()">Log Out</a></li>
-</ul>
+<div class="welcome">
+    <h2>Welcome, <span id="userName"></span>!</h2>
+</div>
+
 
 <script>
-    if (!sessionStorage.getItem("token")) {
-        window.location.href = "Login.html"; // redirect to login
-    }
+   /**if (!sessionStorage.getItem("token")) {
+        window.location.href = "login.html"; // redirect to login
+    }*/
 
-    const username = sessionStorage.getItem("username");
-    document.getElementById("userName").textContent = username;
 
-    function logOut() {
-        sessionStorage.clear();
-        window.location.href = "Login.html";
-    }
+   const username = sessionStorage.getItem("username");
+   document.getElementById("userName").textContent = username;
+
+   function logOut() {
+       // Step 1: Clear the session storage
+       sessionStorage.clear();
+
+       // Step 2: Optional - Call the backend to invalidate the token (optional, if you have a logout endpoint)
+       fetch('/rest/changes/logOut', {
+           method: 'POST',
+           headers: { "Content-Type": "application/json" }
+       })
+           .then(response => {
+               if (response.ok) {
+                   console.log("Logged out successfully.");
+               } else {
+                   console.log("Error logging out.");
+               }
+           })
+           .catch(error => console.error('Logout error:', error));
+
+       // Step 3: Redirect to the login page
+       window.location.href = "login.html";
+   }
 </script>
 </body>
 </html>

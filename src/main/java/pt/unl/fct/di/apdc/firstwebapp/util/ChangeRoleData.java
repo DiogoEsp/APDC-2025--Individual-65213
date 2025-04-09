@@ -7,15 +7,13 @@ public class ChangeRoleData {
     private static final String ADMIN = "ADMIN";
     private static final String PARTNER = "PARTNER";
 
-    public String user;
     public String otherUser;
 
     public String role;
 
     public ChangeRoleData(){}
 
-    public ChangeRoleData(String user ,String otherUser , String role){
-        this.user = user;
+    public ChangeRoleData(String otherUser , String role){
         this.role = role;
         this.otherUser = otherUser;
     }
