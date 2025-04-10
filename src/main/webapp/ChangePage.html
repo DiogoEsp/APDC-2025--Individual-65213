@@ -47,7 +47,7 @@
     <a href="ChangeAccountState.html">Change Account State</a>
     <a href="RemoveUser.html">Remove User</a>
     <a href="ListUsers.html">List Users</a>
-    <a href="changeAtribs.html">Change Information</a>
+    <a href="ChangeAtribs.html">Change Information</a>
     <a href="ChangePwd.html">Change Password</a>
     <a href="#" class="right" onclick="logOut()">Log Out</a>
 </div>
@@ -58,10 +58,11 @@
 
 
 <script>
-   /**if (!sessionStorage.getItem("token")) {
+   if (!sessionStorage.getItem("token")) {
         window.location.href = "login.html"; // redirect to login
-    }*/
+   }
 
+   console.log(sessionStorage.getItem("token"));
 
    const username = sessionStorage.getItem("username");
    document.getElementById("userName").textContent = username;
@@ -85,7 +86,7 @@
            .catch(error => console.error('Logout error:', error));
 
        // Step 3: Redirect to the login page
-       window.location.href = "login.html";
+       window.location.href = "index.html";
    }
 </script>
 </body>

@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Change Role</title>
+
+    <style>body {
+        margin: 0;
+        font-family: Arial, sans-serif;
+    }
+
+    .navbar {
+        background-color: #333;
+        overflow: hidden;
+        padding: 0 20px;
+    }
+
+    .navbar a {
+        float: left;
+        display: block;
+        color: #f2f2f2;
+        text-align: center;
+        padding: 16px 20px;
+        text-decoration: none;
+        transition: background 0.3s;
+    }
+
+    .navbar a:hover {
+        background-color: #575757;
+    }
+
+    .navbar .right {
+        float: right;
+    }</style>
+
+</head>
+
+<body>
+<div class="navbar">
+    <a href="index.html"> Welcome Page</a>
+    <a href="ChangeRole.html">Change Role</a>
+    <a href="ChangeAccountState.html">Change Account State</a>
+    <a href="RemoveUser.html">Remove User</a>
+    <a href="ListUsers.html">List Users</a>
+    <a href="ChangeAtribs.html">Change Information</a>
+    <a href="ChangePwd.html">Change Password</a>
+    <a href="#" class="right" onclick="logOut()">Log Out</a>
+</div>
+<div>
+    <h2>Change Role</h2>
+    <form id="changeRoleForm">
+        <label>Username: <input type="text" name="username" required></label><br><br>
+        <label>Account Role:
+            <select name="role" required>
+                <option value="ADMIN">ADMIN</option>
+                <option value="BACKOFFICE">BACKOFFICE</option>
+                <option value="PARTNER">PARTNER</option>
+                <option value="ENDUSER">ENDUSER</option>
+            </select>
+        </label><br><br>
+        <button type="submit">Change</button>
+    </form>
+    <p id="error" style="color:red;"></p>
+</div>
+
+<div id="result" style="display:none; margin-top:20px;"></div>
+
+<script>
+
+    const form = document.getElementById("changeAccountStateForm");
+    const resultDiv = document.getElementById("result");
+
+    document.getElementById('changeRoleForm').addEventListener('submit', async function (e) {
+        e.preventDefault();
+
+        const formData = {
+            username: e.target.username.value,
+            role: e.target.role.value
+        };
+
+        const token = sessionStorage.getItem("token")
+
+        const response = await fetch('/rest/changes/role', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + token // or token if it's just the string
+                 },
+            body: JSON.stringify(formData)
+        });
+
+        form.style.display = "none";
+
+        if (response.ok) {
+            resultDiv.innerHTML = `
+            <p>Operation done with success</p>
+        `;
+            resultDiv.style.display = "block";
+        }
+        else{
+            if(response.status == 401){
+                resultDiv.innerHTML = `
+            <p>something wth login</p>
+        `;
+                resultDiv.style.display = "block";
+            }
+            else{
+                resultDiv.innerHTML = `
+            <p>idk what went wrong</p>
+        `;
+                resultDiv.style.display = "block";
+            }
+        }
+    });
+
+    function logOut() {
+        // Step 1: Clear the session storage
+        sessionStorage.clear();
+
+        // Step 2: Optional - Call the backend to invalidate the token (optional, if you have a logout endpoint)
+        fetch('/rest/changes/logOut', {
+            method: 'POST',
+            headers: { "Content-Type": "application/json" }
+        })
+            .then(response => {
+                if (response.ok) {
+                    console.log("Logged out successfully.");
+                } else {
+                    console.log("Error logging out.");
+                }
+            })
+            .catch(error => console.error('Logout error:', error));
+
+        // Step 3: Redirect to the login page
+        window.location.href = "index.html";
+    }
+
+</script>
+
+</body>
+</html>

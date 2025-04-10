@@ -179,7 +179,7 @@ public class ChangesResource {
                     .set("employer", EMPTY)
                     .set("function", EMPTY).build();
 
-            datastore.add(updatedUser);
+            datastore.put(updatedUser);
 
             return Response.ok().build();
         }
@@ -196,7 +196,7 @@ public class ChangesResource {
     public Response removeUserAccount(@Context HttpHeaders headers, RemUserData data){
 
         //gets the authorization header
-        String authHeader = headers.getHeaderString("Authorization");
+            String authHeader = headers.getHeaderString("Authorization");
 
         //checks if the authHeader is valid
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {

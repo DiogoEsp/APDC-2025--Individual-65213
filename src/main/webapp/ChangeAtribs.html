@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Change User Attributes</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+        }
+
+        .navbar {
+            background-color: #333;
+            overflow: hidden;
+            padding: 0 20px;
+        }
+
+        .navbar a {
+            float: left;
+            display: block;
+            color: #f2f2f2;
+            text-align: center;
+            padding: 16px 20px;
+            text-decoration: none;
+            transition: background 0.3s;
+        }
+
+        .navbar a:hover {
+            background-color: #575757;
+        }
+
+        .navbar .right {
+            float: right;
+        }
+
+        form {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ccc;
+            width: 300px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+        }
+
+        input {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 12px;
+        }
+
+        button {
+            padding: 8px 12px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="navbar">
+    <a href="index.html">Welcome Page</a>
+    <a href="ChangeRole.html">Change Role</a>
+    <a href="ChangeAccountState.html">Change Account State</a>
+    <a href="RemoveUser.html">Remove User</a>
+    <a href="ListUsers.html">List Users</a>
+    <a href="changeAtribs.html">Change Information</a>
+    <a href="ChangePwd.html">Change Password</a>
+    <a href="#" class="right" onclick="logOut()">Log Out</a>
+</div>
+
+<div style="padding: 20px;">
+    <h2>Change User Information</h2>
+
+    <form onsubmit="submitChange(event, 'name')">
+        <label>New Name:</label>
+        <input type="text" id="name" required />
+        <button type="submit">Change Name</button>
+    </form>
+
+    <form onsubmit="submitChange(event, 'email')">
+        <label>New Email:</label>
+        <input type="email" id="email" required />
+        <button type="submit">Change Email</button>
+    </form>
+
+    <form onsubmit="submitChange(event, 'address')">
+        <label>New Address:</label>
+        <input type="text" id="address" required />
+        <button type="submit">Change Address</button>
+    </form>
+
+    <form onsubmit="submitChange(event, 'employer')">
+        <label>New Employer:</label>
+        <input type="text" id="employer" required />
+        <button type="submit">Change Employer</button>
+    </form>
+
+    <div id="result" style="margin-top:20px;"></div>
+</div>
+
+<script>
+    function submitChange(event, attribute) {
+        event.preventDefault();
+
+        const value = document.getElementById(attribute).value;
+        const token = sessionStorage.getItem("token");
+
+        fetch("/rest/changes/changeAttribute", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": "Bearer " + token
+            },
+            body: JSON.stringify({ attribute: attribute, value: value })
+        })
+            .then(response => {
+                const resultDiv = document.getElementById("result");
+                if (response.ok) {
+                    resultDiv.innerHTML = `<p style="color:green;">Successfully updated ${attribute}.</p>`;
+                } else if (response.status === 401) {
+                    resultDiv.innerHTML = `<p style="color:red;">Unauthorized. Please log in again.</p>`;
+                } else {
+                    return response.text().then(text => {
+                        resultDiv.innerHTML = `<p style="color:red;">Error: ${text}</p>`;
+                    });
+                }
+            })
+            .catch(error => {
+                document.getElementById("result").innerHTML = `<p style="color:red;">Error: ${error.message}</p>`;
+            });
+    }
+
+    function logOut() {
+        sessionStorage.clear();
+
+        fetch('/rest/changes/logOut', {
+            method: 'POST',
+            headers: { "Content-Type": "application/json" }
+        })
+            .then(response => {
+                if (response.ok) {
+                    console.log("Logged out successfully.");
+                } else {
+                    console.log("Error logging out.");
+                }
+            })
+            .catch(error => console.error('Logout error:', error));
+
+        window.location.href = "index.html";
+    }
+</script>
+
+</body>
+</html>

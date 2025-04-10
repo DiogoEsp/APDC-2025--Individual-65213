@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Remove User</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+        }
+
+        .navbar {
+            background-color: #333;
+            overflow: hidden;
+            padding: 0 20px;
+        }
+
+        .navbar a {
+            float: left;
+            display: block;
+            color: #f2f2f2;
+            text-align: center;
+            padding: 16px 20px;
+            text-decoration: none;
+            transition: background 0.3s;
+        }
+
+        .navbar a:hover {
+            background-color: #575757;
+        }
+
+        .navbar .right {
+            float: right;
+        }
+
+        .container {
+            padding: 20px;
+        }
+
+        #result {
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="navbar">
+    <a href="index.html">Welcome Page</a>
+    <a href="ChangeRole.html">Change Role</a>
+    <a href="ChangeAccountState.html">Change Account State</a>
+    <a href="RemoveUser.html">Remove User</a>
+    <a href="ListUsers.html">List Users</a>
+    <a href="ChangeAtribs.html">Change Information</a>
+    <a href="ChangePwd.html">Change Password</a>
+    <a href="#" class="right" onclick="logOut()">Log Out</a>
+</div>
+
+<div class="container">
+    <h2>Remove User Account</h2>
+    <form id="removeForm">
+        <label for="username">Username to remove:</label><br>
+        <input type="text" id="username" name="username" required><br><br>
+        <button type="submit">Remove User</button>
+    </form>
+    <p id="result" style="color:red;"></p>
+</div>
+
+<script>
+    function logOut() {
+        sessionStorage.clear();
+        window.location.href = "index.html";
+    }
+
+    document.getElementById('removeForm').addEventListener('submit', async function (e) {
+        e.preventDefault();
+
+        const token = sessionStorage.getItem('token');
+        const usernameToRemove = document.getElementById('username').value;
+        const result = document.getElementById('result');
+
+        if (!token) {
+            result.innerText = 'You are not logged in.';
+            return;
+        }
+
+        try {
+            const response = await fetch('/rest/changes/remUserAccount', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer ' + token
+                },
+                body: JSON.stringify({ other: usernameToRemove })
+            });
+
+            if (response.ok) {
+                result.style.color = 'green';
+                result.innerText = 'User removed successfully.';
+            } else {
+                const errorText = await response.text();
+                result.style.color = 'red';
+                result.innerText = 'Error: ' + errorText;
+            }
+        } catch (error) {
+            result.innerText = 'Request failed: ' + error.message;
+        }
+    });
+</script>
+
+</body>
+</html>

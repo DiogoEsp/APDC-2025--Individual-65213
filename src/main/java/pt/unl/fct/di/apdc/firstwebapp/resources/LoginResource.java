@@ -149,6 +149,18 @@ public class LoginResource {
 
 				// Return token
 				AuthToken token = new AuthToken(data.username);
+
+				//store the token in the datastore
+				Key tokenKey = datastore.newKeyFactory().setKind("AuthToken").newKey(token.tokenID);
+				Entity tokenEntity = Entity.newBuilder(tokenKey)
+						.set("username", data.username)
+						.set("creation", Timestamp.of(new Date(token.creationData)))
+						.set("expiration", Timestamp.of(new Date(token.expirationData)))
+						.build();
+
+				datastore.put(tokenEntity);
+
+
 				LOG.info(LOG_MESSAGE_LOGIN_SUCCESSFUL + data.username);
 				return Response.ok(g.toJson(token)).build();
 			} else {
