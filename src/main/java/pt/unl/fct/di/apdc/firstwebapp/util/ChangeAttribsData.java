@@ -2,9 +2,12 @@ package pt.unl.fct.di.apdc.firstwebapp.util;
 
 public class ChangeAttribsData {
 
-    public String username;
+    public String other;
     public String name;
     public String email;
+    public String profile;
+    public String role;
+    public String state;
     public String address;
     public String cc;
     public String NIF;
@@ -15,15 +18,19 @@ public class ChangeAttribsData {
 
     }
 
-    public ChangeAttribsData(String username, String name, String email, String address,
-                             String cc,String NIF, String employer, String function){
-        this.username = username;
+    // Constructor
+    public ChangeAttribsData(String other, String name, String email, String profile, String role, String state,
+                             String address, String cc, String NIF, String employer, String function) {
+        this.other = other;
+        this.name = name;
+        this.email = email;
+        this.profile = profile;
+        this.role = role;
+        this.state = state;
         this.address = address;
         this.cc = cc;
         this.NIF = NIF;
-        this.function = function;
         this.employer = employer;
-        this.email = email;
-        this.name = name;
+        this.function = function;
     }
 }

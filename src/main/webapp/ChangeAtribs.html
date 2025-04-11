@@ -49,6 +49,11 @@
 <div>
     <h2>Change Account Attributes</h2>
     <form id="changeAttributesForm">
+
+        <div id="other_user_field">
+            <label>Other User: <input type="text" name="other_username"></label><br><br>
+        </div>
+
         <div id="username_field">
             <label>Username: <input type="text" name="username"></label><br><br>
         </div>
@@ -61,7 +66,15 @@
             <label>Name: <input type="text" name="name"></label><br><br>
         </div>
 
-        <label>Profile: <input type="text" name="profile"></label><br><br>
+        <div id="user_profile_field">
+            <label>Role:
+                <select name="profile">
+                    <option value="PUBLIC">PUBLIC</option>
+                    <option value="PRIVATE">PRIVATE</option>
+                    <option value="SUSPENDED">SUSPENDED</option>
+                </select>
+            </label><br><br>
+        </div>
         <label>Address: <input type="text" name="address"></label><br><br>
         <label>CC: <input type="text" name="cc"></label><br><br>
         <label>NIF: <input type="text" name="nif"></label><br><br>
@@ -97,76 +110,87 @@
 <div id="result" style="display:none; margin-top:20px;"></div>
 
 <script>
-    document.addEventListener('DOMContentLoaded', () => {
-        const userRole = sessionStorage.getItem("userRole");
-        const usernameField = document.getElementById("username_field");
-        const emailField = document.getElementById("email_field");
-        const nameField = document.getElementById("name_field");
-        const roleField = document.getElementById("user_role_field");
-        const stateField = document.getElementById("user_account_state_field");
+    document.addEventListener('DOMContentLoaded', async () => {
+            // Fetch from backend
+            const token = sessionStorage.getItem("token");
+            if (!token) return;
 
-        if (userRole === "ENDUSER") {
-            usernameField.style.display = "none";
-            emailField.style.display = "none";
-            nameField.style.display = "none";
-            roleField.style.display = "none";
-            stateField.style.display = "none";
-        } else if (userRole === "BACKOFFICE") {
-            usernameField.style.display = "none";
-            emailField.style.display = "none";
-            roleField.style.display = "none";
-            stateField.style.display = "none";
-        }
+            const response = await fetch('/rest/account/me', {
+                headers: { 'Authorization': 'Bearer ' + token }
+            });
+
+            if (response.ok) {
+                const user = await response.json();
+                userRole = user.user_role;
+                sessionStorage.setItem("userRole", userRole);
+            } else {
+                console.error("Failed to fetch user info.");
+                return;
+            }
+
+        applyRoleRules(userRole);
     });
 
-    const form = document.getElementById("changeAttributesForm");
-    const resultDiv = document.getElementById("result");
+    function applyRoleRules(userRole) {
+        if (userRole === "ENDUSER") {
+            hide("other_user_field");
+            hide("username_field");
+            hide("email_field");
+            hide("name_field");
+            hide("user_role_field");
+            hide("user_account_state_field");
+        } else if (userRole === "BACKOFFICE") {
+            hide("other_user_field");
+            hide("username_field");
+            hide("email_field");
+            hide("user_role_field");
+            hide("user_account_state_field");
+        }
+    }
 
-    form.addEventListener('submit', async function (e) {
+    function hide(id) {
+        const el = document.getElementById(id);
+        if (el) el.style.display = "none";
+    }
+
+    document.getElementById("attributeForm").addEventListener("submit", async function (e) {
         e.preventDefault();
-        console.log("form submit triggered");
+        const formData = new FormData(e.target);
+        const jsonData = {};
 
-        const formData = {
-            username: e.target.username.value,
-            email: e.target.email.value,
-            name: e.target.name.value,
-            profile: e.target.profile.value,
-            address: e.target.address.value,
-            cc: e.target.cc.value,
-            nif: e.target.nif.value,
-            employer: e.target.employer.value,
-            function: e.target.function.value,
-            role: e.target.role.value,
-            state: e.target.state.value
-        };
+        formData.forEach((value, key) => {
+            if (value.trim() !== "") {
+                jsonData[key] = value;
+            }
+        });
 
         const token = sessionStorage.getItem("token");
 
-        const response = await fetch('/rest/changes/changeAttributes', {
-            method: 'POST',
+        const response = await fetch('/rest/changes/attributes', {
+            method: "POST",
             headers: {
-                'Content-Type': 'application/json',
-                'Authorization': 'Bearer ' + token
+                "Content-Type": "application/json",
+                "Authorization": "Bearer " + token
             },
-            body: JSON.stringify(formData)
+            body: JSON.stringify(jsonData)
         });
 
-        form.style.display = "none";
-
+        const responseMessage = document.getElementById("responseMessage");
         if (response.ok) {
-            resultDiv.innerHTML = `<p>Attributes updated successfully!</p>`;
+            responseMessage.textContent = "Attributes updated successfully!";
         } else {
-            resultDiv.innerHTML = `<p>Error updating attributes (code: ${response.status})</p>`;
+            responseMessage.textContent = "Failed to update attributes.";
+            responseMessage.style.color = "red";
         }
-        resultDiv.style.display = "block";
     });
 
+    //logout
     function logOut() {
         sessionStorage.clear();
         fetch('/rest/changes/logOut', {
             method: 'POST',
             headers: { "Content-Type": "application/json" }
-        }).finally(() => {
+        }).then(() => {
             window.location.href = "index.html";
         });
     }

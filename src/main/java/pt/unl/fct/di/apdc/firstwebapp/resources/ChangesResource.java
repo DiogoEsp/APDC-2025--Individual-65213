@@ -9,6 +9,7 @@ import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import org.apache.commons.codec.digest.DigestUtils;
 import pt.unl.fct.di.apdc.firstwebapp.util.ChangeAccountStateData;
+import pt.unl.fct.di.apdc.firstwebapp.util.ChangeAttribsData;
 import pt.unl.fct.di.apdc.firstwebapp.util.ChangeRoleData;
 import pt.unl.fct.di.apdc.firstwebapp.util.RemUserData;
 
@@ -244,9 +245,67 @@ public class ChangesResource {
     @POST
     @Path("/AccountAttrib")
     @Consumes(MediaType.APPLICATION_JSON)
-    public Response changeAttribs(){
-        return Response.ok().build();
+    public Response changeAttribs(@Context HttpHeaders headers, ChangeAttribsData data){
+
+        //gets the authorization header
+        String authHeader = headers.getHeaderString("Authorization");
+
+        //checks if the authHeader is valid
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            return Response.status(Response.Status.UNAUTHORIZED).build();
+        }
+
+        //cuts the bearer word to get the userId
+        String tokenID = authHeader.substring("Bearer ".length());
+        Key tokenKey = datastore.newKeyFactory().setKind("AuthToken").newKey(tokenID);
+        Entity token = datastore.get(tokenKey);
+        Key userKey = datastore.newKeyFactory().setKind("User").newKey(token.getString("username"));
+        Entity user = validateTokenAndGetUser(tokenID);
+        if (user == null) {
+            return Response.status(Response.Status.UNAUTHORIZED).entity("Invalid or expired token.").build();
+        }
+
+        Key otherKey = datastore.newKeyFactory().setKind("User").newKey(data.other);
+
+        if(data.other != null && datastore.get(otherKey) == null){
+            return Response.status(Response.Status.NOT_FOUND).build();
+        }
+
+        try{
+            Key theKey;
+
+
+            if(data.other == null)
+                theKey = userKey;
+            else{
+                theKey = otherKey;
+            }
+            Entity theUser = datastore.get(theKey);
+
+            Entity updatedUser = Entity.newBuilder(theKey)
+                    .set("user_userName", theUser.getString("user_userName"))
+                    .set("user_name", (data.name != null ? data.name : theUser.getString("user_name")))
+                    .set("user_email", (data.email != null ? data.email : theUser.getString("user_email")))
+                    .set("user_profile", (data.profile != null ? data.profile : theUser.getString("user_profile")))
+                    .set("user_role", (data.role != null ? data.role.toUpperCase() : theUser.getString("user_role")))
+                    .set("user_account_state", (data.state != null ? data.state.toUpperCase() : theUser.getString("user_account_state")))
+                    .set("address", (data.address != null ? data.address : theUser.getString("address")))
+                    .set("cc", (data.cc != null ? data.cc : theUser.getString("cc")))
+                    .set("NIF", (data.NIF != null ? data.NIF : theUser.getString("NIF")))
+                    .set("employer", (data.employer != null ? data.employer : theUser.getString("employer")))
+                    .set("function", (data.function != null ? data.function : theUser.getString("function")))
+                    .build();
+
+
+            datastore.put(updatedUser);
+            return Response.ok().build();
+        }
+        catch(DatastoreException e){
+            LOG.log(Level.SEVERE, e.toString());
+            return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(e.getReason()).build();
+        }
     }
+
     @POST
     @Path("/password")
     @Consumes(MediaType.APPLICATION_JSON)
@@ -278,5 +337,30 @@ public class ChangesResource {
         }
 
         return Response.ok().build();
+    }
+
+    @GET
+    @Path("/getRole")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response getRole(@Context HttpHeaders headers){
+
+        //gets the authorization header
+        String authHeader = headers.getHeaderString("Authorization");
+
+        //checks if the authHeader is valid
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            return Response.status(Response.Status.UNAUTHORIZED).build();
+        }
+
+        //cuts the bearer word to get the userId
+        String tokenID = authHeader.substring("Bearer ".length());
+        Entity user = validateTokenAndGetUser(tokenID);
+        if (user == null) {
+            return Response.status(Response.Status.UNAUTHORIZED).entity("Invalid or expired token.").build();
+        }
+
+        // Return role as JSON
+        String role = user.getString("user_role");
+        return Response.ok("{\"role\": \"" + role + "\"}").build();
     }
 }
