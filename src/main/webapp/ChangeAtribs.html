@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Change User Attributes</title>
+    <title>Change Account Attributes</title>
     <style>
         body {
             margin: 0;
@@ -32,32 +32,9 @@
         .navbar .right {
             float: right;
         }
-
-        form {
-            margin: 20px 0;
-            padding: 15px;
-            border: 1px solid #ccc;
-            width: 300px;
-        }
-
-        label {
-            display: block;
-            margin-bottom: 8px;
-        }
-
-        input {
-            width: 100%;
-            padding: 8px;
-            margin-bottom: 12px;
-        }
-
-        button {
-            padding: 8px 12px;
-        }
     </style>
 </head>
 <body>
-
 <div class="navbar">
     <a href="index.html">Welcome Page</a>
     <a href="ChangeRole.html">Change Role</a>
@@ -69,87 +46,130 @@
     <a href="#" class="right" onclick="logOut()">Log Out</a>
 </div>
 
-<div style="padding: 20px;">
-    <h2>Change User Information</h2>
+<div>
+    <h2>Change Account Attributes</h2>
+    <form id="changeAttributesForm">
+        <div id="username_field">
+            <label>Username: <input type="text" name="username"></label><br><br>
+        </div>
 
-    <form onsubmit="submitChange(event, 'name')">
-        <label>New Name:</label>
-        <input type="text" id="name" required />
-        <button type="submit">Change Name</button>
+        <div id="email_field">
+            <label>Email: <input type="email" name="email"></label><br><br>
+        </div>
+
+        <div id="name_field">
+            <label>Name: <input type="text" name="name"></label><br><br>
+        </div>
+
+        <label>Profile: <input type="text" name="profile"></label><br><br>
+        <label>Address: <input type="text" name="address"></label><br><br>
+        <label>CC: <input type="text" name="cc"></label><br><br>
+        <label>NIF: <input type="text" name="nif"></label><br><br>
+        <label>Employer: <input type="text" name="employer"></label><br><br>
+        <label>Function: <input type="text" name="function"></label><br><br>
+
+        <div id="user_role_field">
+            <label>Role:
+                <select name="role">
+                    <option value="ENDUSER">ENDUSER</option>
+                    <option value="PARTNER">PARTNER</option>
+                    <option value="BACKOFFICE">BACKOFFICE</option>
+                    <option value="ADMIN">ADMIN</option>
+                </select>
+            </label><br><br>
+        </div>
+
+        <div id="user_account_state_field">
+            <label>Account State:
+                <select name="state">
+                    <option value="ACTIVATED">ACTIVATED</option>
+                    <option value="DEACTIVATED">DEACTIVATED</option>
+                    <option value="SUSPENDED">SUSPENDED</option>
+                </select>
+            </label><br><br>
+        </div>
+
+        <button type="submit">Submit Changes</button>
     </form>
-
-    <form onsubmit="submitChange(event, 'email')">
-        <label>New Email:</label>
-        <input type="email" id="email" required />
-        <button type="submit">Change Email</button>
-    </form>
-
-    <form onsubmit="submitChange(event, 'address')">
-        <label>New Address:</label>
-        <input type="text" id="address" required />
-        <button type="submit">Change Address</button>
-    </form>
-
-    <form onsubmit="submitChange(event, 'employer')">
-        <label>New Employer:</label>
-        <input type="text" id="employer" required />
-        <button type="submit">Change Employer</button>
-    </form>
-
-    <div id="result" style="margin-top:20px;"></div>
+    <p id="error" style="color:red;"></p>
 </div>
 
-<script>
-    function submitChange(event, attribute) {
-        event.preventDefault();
+<div id="result" style="display:none; margin-top:20px;"></div>
 
-        const value = document.getElementById(attribute).value;
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const userRole = sessionStorage.getItem("userRole");
+        const usernameField = document.getElementById("username_field");
+        const emailField = document.getElementById("email_field");
+        const nameField = document.getElementById("name_field");
+        const roleField = document.getElementById("user_role_field");
+        const stateField = document.getElementById("user_account_state_field");
+
+        if (userRole === "ENDUSER") {
+            usernameField.style.display = "none";
+            emailField.style.display = "none";
+            nameField.style.display = "none";
+            roleField.style.display = "none";
+            stateField.style.display = "none";
+        } else if (userRole === "BACKOFFICE") {
+            usernameField.style.display = "none";
+            emailField.style.display = "none";
+            roleField.style.display = "none";
+            stateField.style.display = "none";
+        }
+    });
+
+    const form = document.getElementById("changeAttributesForm");
+    const resultDiv = document.getElementById("result");
+
+    form.addEventListener('submit', async function (e) {
+        e.preventDefault();
+        console.log("form submit triggered");
+
+        const formData = {
+            username: e.target.username.value,
+            email: e.target.email.value,
+            name: e.target.name.value,
+            profile: e.target.profile.value,
+            address: e.target.address.value,
+            cc: e.target.cc.value,
+            nif: e.target.nif.value,
+            employer: e.target.employer.value,
+            function: e.target.function.value,
+            role: e.target.role.value,
+            state: e.target.state.value
+        };
+
         const token = sessionStorage.getItem("token");
 
-        fetch("/rest/changes/changeAttribute", {
-            method: "POST",
+        const response = await fetch('/rest/changes/changeAttributes', {
+            method: 'POST',
             headers: {
-                "Content-Type": "application/json",
-                "Authorization": "Bearer " + token
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + token
             },
-            body: JSON.stringify({ attribute: attribute, value: value })
-        })
-            .then(response => {
-                const resultDiv = document.getElementById("result");
-                if (response.ok) {
-                    resultDiv.innerHTML = `<p style="color:green;">Successfully updated ${attribute}.</p>`;
-                } else if (response.status === 401) {
-                    resultDiv.innerHTML = `<p style="color:red;">Unauthorized. Please log in again.</p>`;
-                } else {
-                    return response.text().then(text => {
-                        resultDiv.innerHTML = `<p style="color:red;">Error: ${text}</p>`;
-                    });
-                }
-            })
-            .catch(error => {
-                document.getElementById("result").innerHTML = `<p style="color:red;">Error: ${error.message}</p>`;
-            });
-    }
+            body: JSON.stringify(formData)
+        });
+
+        form.style.display = "none";
+
+        if (response.ok) {
+            resultDiv.innerHTML = `<p>Attributes updated successfully!</p>`;
+        } else {
+            resultDiv.innerHTML = `<p>Error updating attributes (code: ${response.status})</p>`;
+        }
+        resultDiv.style.display = "block";
+    });
 
     function logOut() {
         sessionStorage.clear();
-
         fetch('/rest/changes/logOut', {
             method: 'POST',
             headers: { "Content-Type": "application/json" }
-        })
-            .then(response => {
-                if (response.ok) {
-                    console.log("Logged out successfully.");
-                } else {
-                    console.log("Error logging out.");
-                }
-            })
-            .catch(error => console.error('Logout error:', error));
-
-        window.location.href = "index.html";
+        }).finally(() => {
+            window.location.href = "index.html";
+        });
     }
 </script>
-
 </body>
 </html>
