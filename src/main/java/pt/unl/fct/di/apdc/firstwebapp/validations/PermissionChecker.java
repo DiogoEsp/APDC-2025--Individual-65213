@@ -1,0 +1,37 @@
+package pt.unl.fct.di.apdc.firstwebapp.validations;
+
+import pt.unl.fct.di.apdc.firstwebapp.util.ChangeAccountStateData;
+import pt.unl.fct.di.apdc.firstwebapp.util.ChangeRoleData;
+import pt.unl.fct.di.apdc.firstwebapp.util.RemUserData;
+
+public class PermissionChecker {
+
+
+    private static final String PUBLIC = "PUBLIC";
+    private static final String PRIVATE = "PRIVATE";
+    private static final String ACTIVATED = "ACTIVATED";
+    private static final String SUSPENDED = "SUSPENDED";
+    private static final String DEACTIVATED = "DEACTIVATED";
+    private static final String ENDUSER = "ENDUSER";
+    private static final String BACKOFFICE = "BACKOFFICE";
+    private static final String ADMIN = "ADMIN";
+    private static final String PARTNER = "PARTNER";
+
+    public static boolean canChangeRole(String userRole, ChangeRoleData data){
+        return !(userRole.equals(ADMIN) ||
+                (userRole.equals(BACKOFFICE) && (data.role.equalsIgnoreCase(PARTNER) || data.role.equalsIgnoreCase(ENDUSER))));
+    }
+
+    public static boolean canChangeStatus(String userRole, ChangeAccountStateData data){
+        return (userRole.equals(ADMIN) ||
+                (userRole.equals(BACKOFFICE) && (data.state.equalsIgnoreCase(ACTIVATED) || data.state.equalsIgnoreCase(DEACTIVATED))));
+    }
+
+    public static boolean canRemUser(String userRole, String otherRole){
+        return (userRole.equals(ADMIN) ||
+                userRole.equals(BACKOFFICE) &&
+                        (otherRole.equals(PARTNER) ||
+                                otherRole.equals(ENDUSER)));
+    }
+
+}

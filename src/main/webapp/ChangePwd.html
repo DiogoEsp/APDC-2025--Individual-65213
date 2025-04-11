@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Change Password</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+        }
+
+        .navbar {
+            background-color: #333;
+            overflow: hidden;
+            padding: 0 20px;
+        }
+
+        .navbar a {
+            float: left;
+            display: block;
+            color: #f2f2f2;
+            text-align: center;
+            padding: 16px 20px;
+            text-decoration: none;
+            transition: background 0.3s;
+        }
+
+        .navbar a:hover {
+            background-color: #575757;
+        }
+
+        .navbar .right {
+            float: right;
+        }
+
+        .container {
+            margin: 40px;
+        }
+    </style>
+</head>
+<body>
+<div class="navbar">
+    <a href="index.html">Welcome Page</a>
+    <a href="ChangeRole.html">Change Role</a>
+    <a href="ChangeAccountState.html">Change Account State</a>
+    <a href="RemoveUser.html">Remove User</a>
+    <a href="ListUsers.html">List Users</a>
+    <a href="changeAtribs.html">Change Information</a>
+    <a href="ChangePwd.html">Change Password</a>
+    <a href="#" class="right" onclick="logOut()">Log Out</a>
+</div>
+
+<div class="container">
+    <h2>Change Your Password</h2>
+    <form id="changePwdForm">
+        <label>Old Password: <input type="password" name="oldPassword" required></label><br><br>
+        <label>New Password: <input type="password" name="newPassword" required></label><br><br>
+        <label>Confirm New Password: <input type="password" name="confirmPassword" required></label><br><br>
+        <button type="submit">Change Password</button>
+    </form>
+    <p id="error" style="color:red;"></p>
+    <p id="success" style="color:green;"></p>
+</div>
+
+<script>
+    const form = document.getElementById("changePwdForm");
+
+    form.addEventListener("submit", async function (e) {
+        e.preventDefault();
+
+        const oldPwd = form.oldPassword.value;
+        const newPwd = form.newPassword.value;
+        const confirmPwd = form.confirmPassword.value;
+
+        if (newPwd !== confirmPwd) {
+            document.getElementById("error").innerText = "New passwords do not match.";
+            return;
+        }
+
+        const token = sessionStorage.getItem("token");
+
+        const response = await fetch("/rest/changes/changePwd", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": "Bearer " + token
+            },
+            body: JSON.stringify({
+                oldPassword: oldPwd,
+                newPassword: newPwd
+            })
+        });
+
+        if (response.ok) {
+            document.getElementById("success").innerText = "Password changed successfully!";
+            form.reset();
+        } else if (response.status === 401) {
+            document.getElementById("error").innerText = "Unauthorized: please log in again.";
+        } else {
+            const text = await response.text();
+            document.getElementById("error").innerText = "Error: " + text;
+        }
+    });
+
+    function logOut() {
+        sessionStorage.clear();
+        fetch('/rest/changes/logOut', {
+            method: 'POST',
+            headers: { "Content-Type": "application/json" }
+        }).finally(() => {
+            window.location.href = "index.html";
+        });
+    }
+</script>
+</body>
+</html>
