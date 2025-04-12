@@ -1,5 +1,6 @@
 package pt.unl.fct.di.apdc.firstwebapp.validations;
 
+import com.google.cloud.datastore.Entity;
 import pt.unl.fct.di.apdc.firstwebapp.util.ChangeAccountStateData;
 import pt.unl.fct.di.apdc.firstwebapp.util.ChangeRoleData;
 import pt.unl.fct.di.apdc.firstwebapp.util.RemUserData;
@@ -8,9 +9,7 @@ public class PermissionChecker {
 
 
     private static final String PUBLIC = "PUBLIC";
-    private static final String PRIVATE = "PRIVATE";
     private static final String ACTIVATED = "ACTIVATED";
-    private static final String SUSPENDED = "SUSPENDED";
     private static final String DEACTIVATED = "DEACTIVATED";
     private static final String ENDUSER = "ENDUSER";
     private static final String BACKOFFICE = "BACKOFFICE";
@@ -33,5 +32,16 @@ public class PermissionChecker {
                         (otherRole.equals(PARTNER) ||
                                 otherRole.equals(ENDUSER)));
     }
+
+    public static boolean isActive(Entity user){
+        String profile = user.getString("user_profile");
+        return profile.equals(PUBLIC);
+    }
+
+    public static boolean canCreateWorkSheet(String userRole){
+        return userRole.equals(PARTNER);
+    }
+
+
 
 }

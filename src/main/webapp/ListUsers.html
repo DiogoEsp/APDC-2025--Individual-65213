@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>List Users</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+        }
+
+        .navbar {
+            background-color: #333;
+            overflow: hidden;
+            padding: 0 20px;
+        }
+
+        .navbar a {
+            float: left;
+            display: block;
+            color: #f2f2f2;
+            text-align: center;
+            padding: 16px 20px;
+            text-decoration: none;
+            transition: background 0.3s;
+        }
+
+        .navbar a:hover {
+            background-color: #575757;
+        }
+
+        .navbar .right {
+            float: right;
+        }
+
+        .container {
+            margin: 40px;
+        }
+
+        h2 {
+            color: #333;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        th, td {
+            padding: 10px;
+            text-align: left;
+            border: 1px solid #ddd;
+        }
+
+        th {
+            background-color: #f2f2f2;
+        }
+
+        .message {
+            font-weight: bold;
+            margin-top: 20px;
+        }
+
+        .message#error {
+            color: red;
+        }
+
+        .message#success {
+            color: green;
+        }
+
+    </style>
+</head>
+<body>
+
+<div class="navbar">
+    <a href="index.html">Welcome Page</a>
+    <a href="ChangeRole.html">Change Role</a>
+    <a href="ChangeAccountState.html">Change Account State</a>
+    <a href="RemoveUser.html">Remove User</a>
+    <a href="ListUsers.html">List Users</a>
+    <a href="ChangeAtribs.html">Change Information</a>
+    <a href="ChangePwd.html">Change Password</a>
+    <a href=WorkSheet.html">Insert Work Sheet</a>
+    <a href="#" class="right" onclick="logOut()">Log Out</a>
+</div>
+
+<div class="container">
+    <h2>User List</h2>
+
+    <table id="userTable">
+        <thead>
+        </thead>
+        <tbody>
+        <!-- User rows will be inserted here dynamically -->
+        </tbody>
+    </table>
+
+    <div class="message" id="error"></div>
+    <div class="message" id="success"></div>
+</div>
+
+<script>
+    async function fetchUsers() {
+        const token = sessionStorage.getItem("token");
+
+        try {
+            const response = await fetch("/rest/changes/listUsers", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": "Bearer " + token
+                }
+            });
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                document.getElementById("error").innerText = "Error: " + errorText;
+                return;
+            }
+
+            const users = await response.json();
+            if (users.length === 0) {
+                document.getElementById("error").innerText = "No users found.";
+                return;
+            }
+
+            populateTable(users);
+        } catch (error) {
+            document.getElementById("error").innerText = "Error fetching users: " + error.message;
+        }
+    }
+
+    function populateTable(users) {
+        const table = document.getElementById("userTable");
+        const thead = table.querySelector("thead");
+        const tbody = table.querySelector("tbody");
+
+        thead.innerHTML = "";
+        tbody.innerHTML = "";
+
+        // Build a consistent column set from all users
+        const columnSet = new Set();
+        users.forEach(user => {
+            Object.keys(user).forEach(key => columnSet.add(key));
+        });
+
+        const columns = Array.from(columnSet);
+
+        // Create header
+        const headerRow = document.createElement("tr");
+        columns.forEach(col => {
+            const th = document.createElement("th");
+            th.textContent = col.charAt(0).toUpperCase() + col.slice(1);
+            headerRow.appendChild(th);
+        });
+        thead.appendChild(headerRow);
+
+        // Create rows
+        users.forEach(user => {
+            const row = document.createElement("tr");
+            columns.forEach(col => {
+                const cell = document.createElement("td");
+                cell.textContent = user[col] ?? "NOT DEFINED";
+                row.appendChild(cell);
+            });
+            tbody.appendChild(row);
+        });
+
+        document.getElementById("success").innerText = "Users loaded successfully!";
+    }
+
+
+    function logOut() {
+        sessionStorage.clear();
+        fetch('/rest/changes/logOut', {
+            method: 'POST',
+            headers: { "Content-Type": "application/json" }
+        }).finally(() => {
+            window.location.href = "index.html";
+        });
+    }
+
+    window.onload = fetchUsers;
+</script>
+
+</body>
+</html>

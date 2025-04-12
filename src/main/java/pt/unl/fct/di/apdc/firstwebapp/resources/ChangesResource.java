@@ -1,19 +1,17 @@
 package pt.unl.fct.di.apdc.firstwebapp.resources;
 
+import com.google.appengine.repackaged.com.google.gson.JsonArray;
 import com.google.cloud.datastore.*;
 import com.google.gson.Gson;
 import jakarta.ws.rs.*;
-import jakarta.ws.rs.core.Context;
-import jakarta.ws.rs.core.HttpHeaders;
-import jakarta.ws.rs.core.MediaType;
-import jakarta.ws.rs.core.Response;
+import jakarta.ws.rs.core.*;
 import org.apache.commons.codec.digest.DigestUtils;
 import pt.unl.fct.di.apdc.firstwebapp.util.*;
 import pt.unl.fct.di.apdc.firstwebapp.validations.*;
 
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
-import java.util.Date;
+import java.util.*;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -21,16 +19,6 @@ import java.util.logging.Logger;
 @Produces(MediaType.APPLICATION_JSON + ";charset=utf-8")
 public class ChangesResource {
 
-
-    private static final String PUBLIC = "PUBLIC";
-    private static final String PRIVATE = "PRIVATE";
-    private static final String ACTIVATED = "ACTIVATED";
-    private static final String SUSPENDED = "SUSPENDED";
-    private static final String DEACTIVATED = "DEACTIVATED";
-    private static final String ENDUSER = "ENDUSER";
-    private static final String BACKOFFICE = "BACKOFFICE";
-    private static final String ADMIN = "ADMIN";
-    private static final String PARTNER = "PARTNER";
     private static final String EMPTY = "";
     private static final Logger LOG = Logger.getLogger(ComputationResource.class.getName());
 
@@ -218,6 +206,7 @@ public class ChangesResource {
         }
     }
 
+
     @POST
     @Path("/AccountAttrib")
     @Consumes(MediaType.APPLICATION_JSON)
@@ -379,4 +368,126 @@ public class ChangesResource {
         String role = user.getString("user_role");
         return Response.ok("{\"role\": \"" + role + "\"}").build();
     }
+
+    @POST
+    @Path("/listUsers")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response listAllUsers(@Context HttpHeaders headers){
+
+        String authHeader = headers.getHeaderString("Authorization");
+
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            return Response.status(Response.Status.UNAUTHORIZED).build();
+        }
+
+        String tokenID = authHeader.substring("Bearer ".length());
+        Entity user = AuthTokenValidator.validateToken(tokenID);
+
+        if (user == null) {
+            return Response.status(Response.Status.UNAUTHORIZED).entity("Invalid or expired token.").build();
+        }
+
+        String userRole = user.getString("user_role");
+        Query<Entity> query = switch (userRole) {
+            case "BACKOFFICE" -> Query.newEntityQueryBuilder()
+                    .setKind("User")
+                    .setFilter(StructuredQuery.PropertyFilter.eq("role", "ENDUSER"))
+                    .build();
+            case "ADMIN" -> Query.newEntityQueryBuilder()
+                    .setKind("User")
+                    .build();
+            default -> Query.newEntityQueryBuilder()
+                    .setKind("User")
+                    .setFilter(StructuredQuery.CompositeFilter.and(
+                            StructuredQuery.PropertyFilter.eq("role", "ENDUSER"),
+                            StructuredQuery.PropertyFilter.eq("accountState", "ACTIVE"),
+                            StructuredQuery.PropertyFilter.eq("profileVisibility", "public")
+                    ))
+                    .build();
+        };
+
+        QueryResults<Entity> results = datastore.run(query);
+
+        List<Map<String, Object>> userList = new ArrayList<>();
+        while (results.hasNext()) {
+            Entity entity = results.next();
+            Map<String, Object> userData = new HashMap<>();
+
+            // Return attributes based on the role
+            userData.put("username", entity.contains("username") ? entity.getString("username") : "NOT DEFINED");
+            userData.put("email", entity.contains("email") ? entity.getString("email") : "NOT DEFINED");
+            userData.put("name", entity.contains("name") ? entity.getString("name") : "NOT DEFINED");
+
+            if (!userRole.equals("ENDUSER")) {
+                userData.put("role", entity.contains("role") ? entity.getString("role") : "NOT DEFINED");
+                userData.put("accountState", entity.contains("accountState") ? entity.getString("accountState") : "NOT DEFINED");
+                userData.put("profileVisibility", entity.contains("profileVisibility") ? entity.getString("profileVisibility") : "NOT DEFINED");
+            }
+
+            userList.add(userData);
+        }
+
+        return Response.ok(userList).build();
+    }
+
+    @POST
+    @Path("/workSheet")
+    @Consumes(MediaType.APPLICATION_JSON)
+    public Response createWorkSheet(@Context HttpHeaders headers,WorkSheetData data){
+
+        String authHeader = headers.getHeaderString("Authorization");
+
+        if (authHeader == null || !authHeader.startsWith("Bearer "))
+            return Response.status(Response.Status.UNAUTHORIZED).build();
+
+        String tokenID = authHeader.substring("Bearer ".length());
+        Entity user = AuthTokenValidator.validateToken(tokenID);
+
+        if (user == null)
+            return Response.status(Response.Status.UNAUTHORIZED).entity("Invalid or expired token.").build();
+
+        if(!PermissionChecker.canCreateWorkSheet(user.getString("user_role")))
+            return Response.status(Response.Status.FORBIDDEN).build();
+
+        if(!data.isValid())
+            return Response.status(Response.Status.BAD_REQUEST).build();
+
+        try {
+
+            Key sheetKey = datastore.newKeyFactory().setKind("WorkSheet").newKey(data.reference);
+
+            Entity sheet = Entity.newBuilder(sheetKey)
+                    .set("sheet_reference", data.reference)
+                    .set("sheet_description", data.description)
+                    .set("sheet_target", data.target)
+                    .set("sheet_adj", data.adj)
+                    .set("sheet_adj_date", EMPTY)
+                    .set("sheet_start_date", EMPTY)
+                    .set("sheet_end_date", EMPTY)
+                    .set("sheet_account", EMPTY)
+                    .set("sheet_adj_account", EMPTY)
+                    .set("sheet_comp_nif", EMPTY)
+                    .set("sheet_state", EMPTY)
+                    .set("sheet_observations", EMPTY)
+                    .build();
+
+            datastore.add(sheet);
+            return  Response.ok().build();
+
+        }catch(DatastoreException e){
+            LOG.log(Level.SEVERE, e.toString());
+            return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(e.getReason()).build();
+        }
+    }
+
+
+    private String getOrDefault(Entity user, String property) {
+        if(user.getString(property) == null){
+            return "NOT DEFINED";
+        }
+        else{
+            return user.getString(property);
+        }
+    }
+
 }

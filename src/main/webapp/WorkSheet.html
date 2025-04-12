@@ -2,38 +2,39 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Change Account State</title>
-    <style>
-        body {
-            margin: 0;
-            font-family: Arial, sans-serif;
-        }
+    <title>Change Role</title>
 
-        .navbar {
-            background-color: #333;
-            overflow: hidden;
-            padding: 0 20px;
-        }
+    <style>body {
+        margin: 0;
+        font-family: Arial, sans-serif;
+    }
 
-        .navbar a {
-            float: left;
-            display: block;
-            color: #f2f2f2;
-            text-align: center;
-            padding: 16px 20px;
-            text-decoration: none;
-            transition: background 0.3s;
-        }
+    .navbar {
+        background-color: #333;
+        overflow: hidden;
+        padding: 0 20px;
+    }
 
-        .navbar a:hover {
-            background-color: #575757;
-        }
+    .navbar a {
+        float: left;
+        display: block;
+        color: #f2f2f2;
+        text-align: center;
+        padding: 16px 20px;
+        text-decoration: none;
+        transition: background 0.3s;
+    }
 
-        .navbar .right {
-            float: right;
-        }
-    </style>
+    .navbar a:hover {
+        background-color: #575757;
+    }
+
+    .navbar .right {
+        float: right;
+    }</style>
+
 </head>
+
 <body>
 <div class="navbar">
     <a href="index.html"> Welcome Page</a>
@@ -46,16 +47,22 @@
     <a href=WorkSheet.html">Insert Work Sheet</a>
     <a href="#" class="right" onclick="logOut()">Log Out</a>
 </div>
-
 <div>
-    <h2>Change State</h2>
-    <form id="changeAccountStateForm">
-        <label>Username: <input type="text" name="username" required></label><br><br>
-        <label>Account State:
-            <select name="state" required>
-                <option value="ACTIVATED">ACTIVATED</option>
-                <option value="SUSPENDED">SUSPENDED</option>
-                <option value="DEACTIVATED">DEACTIVATED</option>
+    <h2>Work Sheet</h2>
+    <form id="workSheetForm">
+        <label>Reference: <input type="text" name="reference" required></label><br><br>
+        <label for="description">Work Description:</label><br>
+        <textarea id="description" name="description" rows="4" cols="50" placeholder="Enter description here..."></textarea><br><br>
+        <label>Work Target:
+            <select name="target" required>
+                <option value="PUBLIC">PUBLIC PROPERTY</option>
+                <option value="PRIVATE">PRIVATE PROPERTY</option>
+            </select>
+        </label><br><br>
+        <label>ADJUDICATED STATE:
+            <select name="adj" required>
+                <option value="ADJUDICATED">NOT ADJUDICATED</option>
+                <option value="NOT_ADJUDICATED">ADJUDICATED</option>
             </select>
         </label><br><br>
         <button type="submit">Change</button>
@@ -70,21 +77,23 @@
     const form = document.getElementById("changeAccountStateForm");
     const resultDiv = document.getElementById("result");
 
-    document.getElementById('changeAccountStateForm').addEventListener('submit', async function (e) {
+    document.getElementById('changeRoleForm').addEventListener('submit', async function (e) {
         e.preventDefault();
-        console.log("form script triggered");
 
         const formData = {
-            username: e.target.username.value,
-            state: e.target.state.value
+            description: e.target.description.value,
+            reference: e.target.reference.value,
+            target: e.target.target.value,
+            adj: e.target.adj.value
         };
-        const token = sessionStorage.getItem("token");
 
-        const response = await fetch('/rest/changes/accountState', {
+        const token = sessionStorage.getItem("token")
+
+        const response = await fetch('/rest/changes/workSheet', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json',
                 'Authorization': 'Bearer ' + token // or token if it's just the string
-                },
+            },
             body: JSON.stringify(formData)
         });
 
@@ -135,5 +144,6 @@
     }
 
 </script>
+
 </body>
-</html>
+</html>>
