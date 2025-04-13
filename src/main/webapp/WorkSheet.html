@@ -2,131 +2,83 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Change Role</title>
-
-    <style>body {
-        margin: 0;
-        font-family: Arial, sans-serif;
-    }
-
-    .navbar {
-        background-color: #333;
-        overflow: hidden;
-        padding: 0 20px;
-    }
-
-    .navbar a {
-        float: left;
-        display: block;
-        color: #f2f2f2;
-        text-align: center;
-        padding: 16px 20px;
-        text-decoration: none;
-        transition: background 0.3s;
-    }
-
-    .navbar a:hover {
-        background-color: #575757;
-    }
-
-    .navbar .right {
-        float: right;
-    }</style>
-
+    <title>Create Work Sheet</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+        }
+        .navbar {
+            background-color: #333;
+            overflow: hidden;
+            padding: 0 20px;
+        }
+        .navbar a {
+            float: left;
+            display: block;
+            color: #f2f2f2;
+            text-align: center;
+            padding: 16px 20px;
+            text-decoration: none;
+            transition: background 0.3s;
+        }
+        .navbar a:hover {
+            background-color: #575757;
+        }
+        .navbar .right {
+            float: right;
+        }
+        #result {
+            display: none;
+            margin-top: 20px;
+        }
+    </style>
 </head>
-
 <body>
 <div class="navbar">
-    <a href="index.html"> Welcome Page</a>
+    <a href="index.html">Home</a>
     <a href="ChangeRole.html">Change Role</a>
     <a href="ChangeAccountState.html">Change Account State</a>
     <a href="RemoveUser.html">Remove User</a>
     <a href="ListUsers.html">List Users</a>
     <a href="ChangeAtribs.html">Change Information</a>
     <a href="ChangePwd.html">Change Password</a>
-    <a href=WorkSheet.html">Insert Work Sheet</a>
+    <a href="WorkSheet.html">Insert Work Sheet</a>
+    <a href="#" class="right" onclick="logOut()">Log Out</a>
     <a href="#" class="right" onclick="logOut()">Log Out</a>
 </div>
+
 <div>
-    <h2>Work Sheet</h2>
+    <h2>Create Work Sheet</h2>
     <form id="workSheetForm">
         <label>Reference: <input type="text" name="reference" required></label><br><br>
         <label for="description">Work Description:</label><br>
-        <textarea id="description" name="description" rows="4" cols="50" placeholder="Enter description here..."></textarea><br><br>
+        <textarea id="description" name="description" rows="4" cols="50" placeholder="Enter description here..." required></textarea><br><br>
         <label>Work Target:
             <select name="target" required>
-                <option value="PUBLIC">PUBLIC PROPERTY</option>
-                <option value="PRIVATE">PRIVATE PROPERTY</option>
+                <option value="PUBLIC">Public Property</option>
+                <option value="PRIVATE">Private Property</option>
             </select>
         </label><br><br>
-        <label>ADJUDICATED STATE:
+        <label>Adjudicated State:
             <select name="adj" required>
-                <option value="ADJUDICATED">NOT ADJUDICATED</option>
-                <option value="NOT_ADJUDICATED">ADJUDICATED</option>
+                <option value="ADJUDICATED">Not Adjudicated</option>
+                <option value="NOT_ADJUDICATED">Adjudicated</option>
             </select>
         </label><br><br>
-        <button type="submit">Change</button>
+        <button type="submit">Create</button>
     </form>
-    <p id="error" style="color:red;"></p>
+
+    <div id="result">
+        <p id="resultMessage"></p>
+    </div>
 </div>
 
-<div id="result" style="display:none; margin-top:20px;"></div>
-
 <script>
-
-    const form = document.getElementById("changeAccountStateForm");
-    const resultDiv = document.getElementById("result");
-
-    document.getElementById('changeRoleForm').addEventListener('submit', async function (e) {
-        e.preventDefault();
-
-        const formData = {
-            description: e.target.description.value,
-            reference: e.target.reference.value,
-            target: e.target.target.value,
-            adj: e.target.adj.value
-        };
-
-        const token = sessionStorage.getItem("token")
-
-        const response = await fetch('/rest/changes/workSheet', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json',
-                'Authorization': 'Bearer ' + token // or token if it's just the string
-            },
-            body: JSON.stringify(formData)
-        });
-
-        form.style.display = "none";
-
-        if (response.ok) {
-            resultDiv.innerHTML = `
-            <p>Operation done with success</p>
-        `;
-            resultDiv.style.display = "block";
-        }
-        else{
-            if(response.status == 401){
-                resultDiv.innerHTML = `
-            <p>something wth login</p>
-        `;
-                resultDiv.style.display = "block";
-            }
-            else{
-                resultDiv.innerHTML = `
-            <p>idk what went wrong</p>
-        `;
-                resultDiv.style.display = "block";
-            }
-        }
-    });
-
+    // Log out function
     function logOut() {
-        // Step 1: Clear the session storage
-        sessionStorage.clear();
-
-        // Step 2: Optional - Call the backend to invalidate the token (optional, if you have a logout endpoint)
-        fetch('/rest/changes/logOut', {
+        sessionStorage.clear();  // Clear session storage
+        fetch('/rest/changes/logOut', {  // Optional, call backend logout endpoint
             method: 'POST',
             headers: { "Content-Type": "application/json" }
         })
@@ -139,11 +91,40 @@
             })
             .catch(error => console.error('Logout error:', error));
 
-        // Step 3: Redirect to the login page
-        window.location.href = "index.html";
+        window.location.href = "index.html";  // Redirect to login page
     }
 
-</script>
+    // Submit form data to REST API
+    document.getElementById('workSheetForm').addEventListener('submit', async function (e) {
+        e.preventDefault();  // Prevent default form submission
 
+        const formData = {
+            description: e.target.description.value,
+            reference: e.target.reference.value,
+            target: e.target.target.value,
+            adj: e.target.adj.value
+        };
+
+        const token = sessionStorage.getItem("token");  // Get token from session storage
+            const response = await fetch('/rest/changes/workSheet', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer ' + token
+                },
+                body: JSON.stringify(formData)
+            });
+
+            const resultDiv = document.getElementById("result");
+            const resultMessage = document.getElementById("resultMessage");
+
+            if (response.ok) {
+                resultMessage.innerHTML = "Operation completed successfully!";
+            } else {
+                resultMessage.innerHTML = "Error: " + (response.status === 401 ? "Login issue" : "Something went wrong.");
+            }
+            resultDiv.style.display = "block";  // Show the result message
+    });
+</script>
 </body>
-</html>>
+</html>

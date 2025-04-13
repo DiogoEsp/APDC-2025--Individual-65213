@@ -19,6 +19,14 @@ import java.util.logging.Logger;
 @Produces(MediaType.APPLICATION_JSON + ";charset=utf-8")
 public class ChangesResource {
 
+
+    private static final String ENDUSER = "ENDUSER";
+    private static final String BACKOFFICE = "BACKOFFICE";
+    private static final String ADMIN = "ADMIN";
+    private static final String PARTNER = "PARTNER";
+    private static final String PUBLIC = "PUBLIC";
+    private static final String ACTIVATED = "ACTIVATED";
+
     private static final String EMPTY = "";
     private static final Logger LOG = Logger.getLogger(ComputationResource.class.getName());
 
@@ -31,9 +39,9 @@ public class ChangesResource {
 
 
     @POST
-    @Path("/role")
+    @Path("/userRole")
     @Consumes(MediaType.APPLICATION_JSON)
-    public Response changeRole(@Context HttpHeaders headers, ChangeRoleData data) {
+    public Response changeRole(@Context HttpHeaders headers, ChangeRoleData data){
         //gets the authorization header
         String authHeader = headers.getHeaderString("Authorization");
 
@@ -48,47 +56,46 @@ public class ChangesResource {
             return Response.status(Response.Status.UNAUTHORIZED).entity("Invalid or expired token.").build();
         }
 
-        if (data.role == null || !data.validRole()) {
-            LOG.info("Invalid role.");
-            return Response.status(Response.Status.BAD_REQUEST).build();
-        }
-
         String userRole = user.getString("user_role");
 
-        if (!PermissionChecker.canChangeRole(userRole, data)) {
-            return Response.status(Response.Status.FORBIDDEN).build();
-        }
+        if(data.role == null || data.username == null)
+            return Response.status(Response.Status.BAD_REQUEST).build();
 
-        try {
-            Key otherKey = datastore.newKeyFactory().setKind("User").newKey(data.otherUser);
+        if(!PermissionChecker.canChangeRole(userRole,data))
+            return Response.status(Response.Status.FORBIDDEN).build();
+
+        try{
+
+            Key otherKey = datastore.newKeyFactory().setKind("User").newKey(data.username);
             Entity other = datastore.get(otherKey);
 
-            if (other == null) {
+            if(other == null)
                 return Response.status(Response.Status.NOT_FOUND).build();
-            }
 
-            Entity updatedUser = Entity.newBuilder(otherKey)
+            Entity update = Entity.newBuilder(otherKey)
                     .set("user_userName", other.getString("user_userName"))
                     .set("user_name", other.getString("user_name"))
-                    .set("user_pwd", other.getString("user_pwd")) // No need to hash again
+                    .set("user_pwd", other.getString("user_pwd"))
                     .set("user_email", other.getString("user_email"))
                     .set("user_profile", other.getString("user_profile"))
-                    .set("user_role", data.role.toUpperCase())
+                    .set("user_role", data.role)
                     .set("user_account_state", other.getString("user_account_state"))
                     .set("address", other.getString("address"))
                     .set("cc", other.getString("cc"))
                     .set("NIF", other.getString("NIF"))
                     .set("employer", other.getString("employer"))
-                    .set("function", other.getString("function"))
-                    .build();
+                    .set("function", other.getString("function")).build();
 
-            datastore.put(updatedUser);
+            datastore.put(update);
             return Response.ok().build();
-        } catch (DatastoreException e) {
-            LOG.log(Level.SEVERE, e.toString());
+
+        }catch(DatastoreException e){
+            LOG.log(Level.ALL, e.toString());
             return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(e.getReason()).build();
         }
     }
+
+
 
 
     @POST
@@ -136,16 +143,16 @@ public class ChangesResource {
             Entity updatedUser = Entity.newBuilder(otherKey)
                     .set("user_userName", other.getString("user_userName"))
                     .set("user_name", other.getString("user_name"))
-                    .set("user_pwd", DigestUtils.sha512Hex(other.getString("user_pwd")))
+                    .set("user_pwd", other.getString("user_pwd"))
                     .set("user_email", other.getString("user_email"))
                     .set("user_profile", other.getString("user_profile"))
                     .set("user_role", other.getString("user_role"))
                     .set("user_account_state", data.state.toUpperCase())
                     .set("address", other.getString("address"))
-                    .set("cc", EMPTY)
-                    .set("NIF", EMPTY)
-                    .set("employer", EMPTY)
-                    .set("function", EMPTY).build();
+                    .set("cc", other.getString("cc"))
+                    .set("NIF", other.getString("NIF"))
+                    .set("employer", other.getString("employer"))
+                    .set("function", other.getString("function")).build();
 
             datastore.put(updatedUser);
 
@@ -153,7 +160,7 @@ public class ChangesResource {
         }
         catch(DatastoreException e) {
             LOG.log(Level.ALL, e.toString());
-            return Response.status(Response.Status.BAD_REQUEST).entity(e.getReason()).build();
+            return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(e.getReason()).build();
         }
     }
 
@@ -202,7 +209,7 @@ public class ChangesResource {
         }
         catch(DatastoreException e){
             LOG.log(Level.ALL, e.toString());
-            return Response.status(Response.Status.BAD_REQUEST).entity(e.getReason()).build();
+            return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(e.getReason()).build();
         }
     }
 
@@ -372,8 +379,7 @@ public class ChangesResource {
     @POST
     @Path("/listUsers")
     @Produces(MediaType.APPLICATION_JSON)
-    public Response listAllUsers(@Context HttpHeaders headers){
-
+    public Response listAllUsers(@Context HttpHeaders headers) {
         String authHeader = headers.getHeaderString("Authorization");
 
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
@@ -381,54 +387,74 @@ public class ChangesResource {
         }
 
         String tokenID = authHeader.substring("Bearer ".length());
-        Entity user = AuthTokenValidator.validateToken(tokenID);
+        Entity requester = AuthTokenValidator.validateToken(tokenID);
 
-        if (user == null) {
+        if (requester == null) {
             return Response.status(Response.Status.UNAUTHORIZED).entity("Invalid or expired token.").build();
         }
 
-        String userRole = user.getString("user_role");
-        Query<Entity> query = switch (userRole) {
-            case "BACKOFFICE" -> Query.newEntityQueryBuilder()
-                    .setKind("User")
-                    .setFilter(StructuredQuery.PropertyFilter.eq("role", "ENDUSER"))
-                    .build();
-            case "ADMIN" -> Query.newEntityQueryBuilder()
-                    .setKind("User")
-                    .build();
-            default -> Query.newEntityQueryBuilder()
-                    .setKind("User")
-                    .setFilter(StructuredQuery.CompositeFilter.and(
-                            StructuredQuery.PropertyFilter.eq("role", "ENDUSER"),
-                            StructuredQuery.PropertyFilter.eq("accountState", "ACTIVE"),
-                            StructuredQuery.PropertyFilter.eq("profileVisibility", "public")
-                    ))
-                    .build();
-        };
+        String userRole = requester.getString("user_role");
+        List<Entity> entities = new ArrayList<>();
 
-        QueryResults<Entity> results = datastore.run(query);
+        switch (userRole) {
+            case "ADMIN" -> {
+                Query<Entity> query = Query.newEntityQueryBuilder()
+                        .setKind("User")
+                        .build();
+                datastore.run(query).forEachRemaining(entities::add);
+            }
+            case "BACKOFFICE" -> {
+                // Fetch ENDUSERs
+                Query<Entity> queryEnduser = Query.newEntityQueryBuilder()
+                        .setKind("User")
+                        .setFilter(StructuredQuery.PropertyFilter.eq("user_role", "ENDUSER"))
+                        .build();
+                datastore.run(queryEnduser).forEachRemaining(entities::add);
+
+                // Fetch PARTNERs
+                Query<Entity> queryPartner = Query.newEntityQueryBuilder()
+                        .setKind("User")
+                        .setFilter(StructuredQuery.PropertyFilter.eq("user_role", "PARTNER"))
+                        .build();
+                datastore.run(queryPartner).forEachRemaining(entities::add);
+            }
+            default -> {
+                Query<Entity> query = Query.newEntityQueryBuilder()
+                        .setKind("User")
+                        .setFilter(StructuredQuery.CompositeFilter.and(
+                                StructuredQuery.PropertyFilter.eq("user_role", "ENDUSER"),
+                                StructuredQuery.PropertyFilter.eq("user_account_state", "ACTIVATED"),
+                                StructuredQuery.PropertyFilter.eq("user_profile", "PUBLIC")
+                        ))
+                        .build();
+                datastore.run(query).forEachRemaining(entities::add);
+            }
+        }
 
         List<Map<String, Object>> userList = new ArrayList<>();
-        while (results.hasNext()) {
-            Entity entity = results.next();
+
+        for (Entity entity : entities) {
             Map<String, Object> userData = new HashMap<>();
 
-            // Return attributes based on the role
-            userData.put("username", entity.contains("username") ? entity.getString("username") : "NOT DEFINED");
-            userData.put("email", entity.contains("email") ? entity.getString("email") : "NOT DEFINED");
-            userData.put("name", entity.contains("name") ? entity.getString("name") : "NOT DEFINED");
-
-            if (!userRole.equals("ENDUSER")) {
-                userData.put("role", entity.contains("role") ? entity.getString("role") : "NOT DEFINED");
-                userData.put("accountState", entity.contains("accountState") ? entity.getString("accountState") : "NOT DEFINED");
-                userData.put("profileVisibility", entity.contains("profileVisibility") ? entity.getString("profileVisibility") : "NOT DEFINED");
+            if (userRole.equals("ENDUSER")) {
+                userData.put("user_userName", entity.getString("user_userName"));
+                userData.put("user_email", entity.getString("user_email"));
+                userData.put("user_name", entity.getString("user_name"));
+            } else {
+                for (String name : entity.getNames()) {
+                    if (!name.equals("user_pwd")) {
+                        userData.put(name, entity.getValue(name).get().toString());
+                    }
+                }
             }
-
             userList.add(userData);
         }
 
         return Response.ok(userList).build();
     }
+
+
+
 
     @POST
     @Path("/workSheet")

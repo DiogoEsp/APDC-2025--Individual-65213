@@ -75,14 +75,14 @@
 <body>
 
 <div class="navbar">
-    <a href="index.html">Welcome Page</a>
+    <a href="index.html">Home</a>
     <a href="ChangeRole.html">Change Role</a>
     <a href="ChangeAccountState.html">Change Account State</a>
     <a href="RemoveUser.html">Remove User</a>
     <a href="ListUsers.html">List Users</a>
     <a href="ChangeAtribs.html">Change Information</a>
     <a href="ChangePwd.html">Change Password</a>
-    <a href=WorkSheet.html">Insert Work Sheet</a>
+    <a href="WorkSheet.html">Insert Work Sheet</a>
     <a href="#" class="right" onclick="logOut()">Log Out</a>
 </div>
 
@@ -99,14 +99,19 @@
 
     <div class="message" id="error"></div>
     <div class="message" id="success"></div>
+    <button id="loadMoreBtn" style="margin-top: 20px; padding: 10px 20px; display: none;">Load More</button>
 </div>
 
 <script>
-    async function fetchUsers() {
+    let offset = 0;
+    const LIMIT = 10;
+    const columns = new Set();
+
+    async function fetchUsers(initial = false) {
         const token = sessionStorage.getItem("token");
 
         try {
-            const response = await fetch("/rest/changes/listUsers", {
+            const response = await fetch(`/rest/changes/listUsers?next=${offset}`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
@@ -117,50 +122,61 @@
             if (!response.ok) {
                 const errorText = await response.text();
                 document.getElementById("error").innerText = "Error: " + errorText;
+                document.getElementById("loadMoreBtn").style.display = "none";
                 return;
             }
 
             const users = await response.json();
-            if (users.length === 0) {
+            if (users.length === 0 && initial) {
                 document.getElementById("error").innerText = "No users found.";
+                document.getElementById("loadMoreBtn").style.display = "none";
                 return;
             }
 
-            populateTable(users);
+            updateTable(users, initial);
+            offset += users.length;
+
+            // Show or hide the "Load More" button
+            document.getElementById("loadMoreBtn").style.display = users.length === LIMIT ? "inline-block" : "none";
+
         } catch (error) {
             document.getElementById("error").innerText = "Error fetching users: " + error.message;
         }
     }
 
-    function populateTable(users) {
+    function updateTable(users, initialLoad) {
         const table = document.getElementById("userTable");
         const thead = table.querySelector("thead");
         const tbody = table.querySelector("tbody");
 
-        thead.innerHTML = "";
-        tbody.innerHTML = "";
+        if (initialLoad) {
+            thead.innerHTML = "";
+            tbody.innerHTML = "";
+        }
 
-        // Build a consistent column set from all users
-        const columnSet = new Set();
+        // Add new keys to the columns set
         users.forEach(user => {
-            Object.keys(user).forEach(key => columnSet.add(key));
+            Object.keys(user).forEach(key => columns.add(key));
         });
 
-        const columns = Array.from(columnSet);
+        const columnArray = Array.from(columns);
 
-        // Create header
-        const headerRow = document.createElement("tr");
-        columns.forEach(col => {
-            const th = document.createElement("th");
-            th.textContent = col.charAt(0).toUpperCase() + col.slice(1);
-            headerRow.appendChild(th);
-        });
-        thead.appendChild(headerRow);
+        // (Re)build the header only on initial load or when new columns are added
+        if (initialLoad || columnArray.length !== thead.querySelectorAll("th").length) {
+            thead.innerHTML = "";
+            const headerRow = document.createElement("tr");
+            columnArray.forEach(col => {
+                const th = document.createElement("th");
+                th.textContent = col.charAt(0).toUpperCase() + col.slice(1);
+                headerRow.appendChild(th);
+            });
+            thead.appendChild(headerRow);
+        }
 
-        // Create rows
+        // Append user rows
         users.forEach(user => {
             const row = document.createElement("tr");
-            columns.forEach(col => {
+            columnArray.forEach(col => {
                 const cell = document.createElement("td");
                 cell.textContent = user[col] ?? "NOT DEFINED";
                 row.appendChild(cell);
@@ -171,19 +187,30 @@
         document.getElementById("success").innerText = "Users loaded successfully!";
     }
 
-
     function logOut() {
         sessionStorage.clear();
+
         fetch('/rest/changes/logOut', {
             method: 'POST',
             headers: { "Content-Type": "application/json" }
-        }).finally(() => {
-            window.location.href = "index.html";
-        });
+        })
+            .then(response => {
+                if (response.ok) {
+                    console.log("Logged out successfully.");
+                } else {
+                    console.log("Error logging out.");
+                }
+            })
+            .catch(error => console.error('Logout error:', error));
+
+        window.location.href = "index.html";
     }
 
-    window.onload = fetchUsers;
+    document.getElementById("loadMoreBtn").addEventListener("click", () => fetchUsers(false));
+    window.onload = () => fetchUsers(true);
 </script>
+
+
 
 </body>
 </html>

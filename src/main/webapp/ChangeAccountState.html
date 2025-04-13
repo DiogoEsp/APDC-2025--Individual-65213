@@ -36,14 +36,14 @@
 </head>
 <body>
 <div class="navbar">
-    <a href="index.html"> Welcome Page</a>
+    <a href="index.html"> Home </a>
     <a href="ChangeRole.html">Change Role</a>
     <a href="ChangeAccountState.html">Change Account State</a>
     <a href="RemoveUser.html">Remove User</a>
     <a href="ListUsers.html">List Users</a>
     <a href="ChangeAtribs.html">Change Information</a>
     <a href="ChangePwd.html">Change Password</a>
-    <a href=WorkSheet.html">Insert Work Sheet</a>
+    <a href="WorkSheet.html">Insert Work Sheet</a>
     <a href="#" class="right" onclick="logOut()">Log Out</a>
 </div>
 
@@ -113,10 +113,8 @@
     });
 
     function logOut() {
-        // Step 1: Clear the session storage
         sessionStorage.clear();
 
-        // Step 2: Optional - Call the backend to invalidate the token (optional, if you have a logout endpoint)
         fetch('/rest/changes/logOut', {
             method: 'POST',
             headers: { "Content-Type": "application/json" }
@@ -130,7 +128,6 @@
             })
             .catch(error => console.error('Logout error:', error));
 
-        // Step 3: Redirect to the login page
         window.location.href = "index.html";
     }
 

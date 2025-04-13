@@ -40,14 +40,14 @@
 </head>
 <body>
 <div class="navbar">
-    <a href="index.html">Welcome Page</a>
+    <a href="index.html">Home</a>
     <a href="ChangeRole.html">Change Role</a>
     <a href="ChangeAccountState.html">Change Account State</a>
     <a href="RemoveUser.html">Remove User</a>
     <a href="ListUsers.html">List Users</a>
     <a href="ChangeAtribs.html">Change Information</a>
     <a href="ChangePwd.html">Change Password</a>
-    <a href=WorkSheet.html">Insert Work Sheet</a>
+    <a href="WorkSheet.html">Insert Work Sheet</a>
     <a href="#" class="right" onclick="logOut()">Log Out</a>
 </div>
 
@@ -105,12 +105,21 @@
 
     function logOut() {
         sessionStorage.clear();
+
         fetch('/rest/changes/logOut', {
             method: 'POST',
             headers: { "Content-Type": "application/json" }
-        }).finally(() => {
-            window.location.href = "index.html";
-        });
+        })
+            .then(response => {
+                if (response.ok) {
+                    console.log("Logged out successfully.");
+                } else {
+                    console.log("Error logging out.");
+                }
+            })
+            .catch(error => console.error('Logout error:', error));
+
+        window.location.href = "index.html";
     }
 </script>
 </body>

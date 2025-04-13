@@ -17,7 +17,7 @@ public class PermissionChecker {
     private static final String PARTNER = "PARTNER";
 
     public static boolean canChangeRole(String userRole, ChangeRoleData data){
-        return !(userRole.equals(ADMIN) ||
+        return (userRole.equals(ADMIN) ||
                 (userRole.equals(BACKOFFICE) && (data.role.equalsIgnoreCase(PARTNER) || data.role.equalsIgnoreCase(ENDUSER))));
     }
 

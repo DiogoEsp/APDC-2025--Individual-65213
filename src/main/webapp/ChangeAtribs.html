@@ -36,14 +36,14 @@
 </head>
 <body>
 <div class="navbar">
-    <a href="index.html">Welcome Page</a>
+    <a href="index.html">Home</a>
     <a href="ChangeRole.html">Change Role</a>
     <a href="ChangeAccountState.html">Change Account State</a>
     <a href="RemoveUser.html">Remove User</a>
     <a href="ListUsers.html">List Users</a>
     <a href="ChangeAtribs.html">Change Information</a>
     <a href="ChangePwd.html">Change Password</a>
-    <a href=WorkSheet.html">Insert Work Sheet</a>
+    <a href="WorkSheet.html">Insert Work Sheet</a>
     <a href="#" class="right" onclick="logOut()">Log Out</a>
 </div>
 
@@ -68,7 +68,7 @@
         </div>
 
         <div id="user_profile_field">
-            <label>Role:
+            <label>Profile:
                 <select name="profile">
                     <option value="PUBLIC">PUBLIC</option>
                     <option value="PRIVATE">PRIVATE</option>
@@ -108,93 +108,116 @@
     <p id="error" style="color:red;"></p>
 </div>
 
-<div id="result" style="display:none; margin-top:20px;"></div>
+<!-- Add the responseMessage element to display feedback -->
+<div id="responseMessage" style="display:none; margin-top:20px;"></div>
 
 <script>
-    document.addEventListener('DOMContentLoaded', async () => {
-            // Fetch from backend
-            const token = sessionStorage.getItem("token");
-            if (!token) return;
-
-            const response = await fetch('/rest/account/me', {
-                headers: { 'Authorization': 'Bearer ' + token }
-            });
-
-            if (response.ok) {
-                const user = await response.json();
-                userRole = user.user_role;
-                sessionStorage.setItem("userRole", userRole);
-            } else {
-                console.error("Failed to fetch user info.");
-                return;
-            }
-
-        applyRoleRules(userRole);
+    document.addEventListener("DOMContentLoaded", function () {
+        // Apply role-based logic
+        applyRoleRules();
     });
 
-    function applyRoleRules(userRole) {
-        if (userRole === "ENDUSER") {
-            hide("other_user_field");
-            hide("username_field");
-            hide("email_field");
-            hide("name_field");
-            hide("user_role_field");
-            hide("user_account_state_field");
-        } else if (userRole === "BACKOFFICE") {
-            hide("other_user_field");
-            hide("username_field");
-            hide("email_field");
-            hide("user_role_field");
-            hide("user_account_state_field");
+    async function applyRoleRules() {
+        const token = sessionStorage.getItem("token");
+
+        // Redirect to login page if token is missing
+        if (!token) {
+            window.location.href = "login.html"; // Redirect to login page
+            return;
+        }
+
+        try {
+            const userRole = await fetchUserRole(token);
+            handleRoleVisibility(userRole);
+        } catch (error) {
+            displayMessage("Error fetching user role: " + error.message, "error");
         }
     }
 
-    function hide(id) {
-        const el = document.getElementById(id);
-        if (el) el.style.display = "none";
+    async function fetchUserRole(token) {
+        const response = await fetch('/rest/changes/getRole', {
+            headers: { 'Authorization': 'Bearer ' + token }
+        });
+
+        if (!response.ok) {
+            throw new Error("Failed to fetch user role");
+        }
+
+        const data = await response.json();
+        return data.role;
     }
 
-    document.getElementById("attributeForm").addEventListener("submit", async function (e) {
-        e.preventDefault();
-        const formData = new FormData(e.target);
-        const jsonData = {};
+    function handleRoleVisibility(userRole) {
+        const roleField = document.getElementsByName("role")[0];  // Access the role dropdown
+        const otherUserField = document.getElementsByName("other_username")[0];  // Access the other user input
 
-        formData.forEach((value, key) => {
-            if (value.trim() !== "") {
-                jsonData[key] = value;
-            }
-        });
+        // Role-specific logic to disable or clear fields based on user role
+        if (userRole === "ENDUSER") {
+            // Disable and clear both fields
+            roleField.value = "";  // Set the role to empty
+            roleField.disabled = true;  // Make it non-editable
+            otherUserField.value = ""; // Clear the otherUser field
+            otherUserField.disabled = true; // Make it non-editable
+        } else if (userRole === "BACKOFFICE") {
+            // Disable the role field, and leave otherUser editable
+            roleField.value = "";  // Set the role to empty
+            roleField.disabled = true;  // Make it non-editable
+        }
+
+        // Show response message area
+        const responseMessage = document.getElementById("responseMessage");
+        responseMessage.style.display = "block";
+    }
+
+    document.getElementById("changeAttributesForm").addEventListener("submit", async function (event) {
+        event.preventDefault();
 
         const token = sessionStorage.getItem("token");
 
-        const response = await fetch('/rest/changes/attributes', {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "Authorization": "Bearer " + token
-            },
-            body: JSON.stringify(jsonData)
-        });
+        if (!token) {
+            window.location.href = "login.html"; // Redirect to login page
+            return;
+        }
 
-        const responseMessage = document.getElementById("responseMessage");
-        if (response.ok) {
-            responseMessage.textContent = "Attributes updated successfully!";
-        } else {
-            responseMessage.textContent = "Failed to update attributes.";
-            responseMessage.style.color = "red";
+        const formData = new FormData(this);
+        const jsonData = Object.fromEntries(formData.entries());
+
+        // If role is not hidden (for example, for BACKOFFICE or ADMIN), include it
+        if (document.getElementsByName("role")[0] && document.getElementsByName("role")[0].value) {
+            jsonData.role = document.getElementsByName("role")[0].value;
+        }
+
+        // Send the request to change role
+        try {
+            const response = await sendRoleChangeRequest(token, jsonData);
+            if (response.ok) {
+                displayMessage("Role changed successfully!", "success");
+            } else {
+                const errorText = await response.text();
+                displayMessage("Error: " + errorText, "error");
+            }
+        } catch (error) {
+            displayMessage("Failed to change role: " + error.message, "error");
         }
     });
 
-    //logout
-    function logOut() {
-        sessionStorage.clear();
-        fetch('/rest/changes/logOut', {
+    async function sendRoleChangeRequest(token, jsonData) {
+        return await fetch('/rest/changes/role', {
             method: 'POST',
-            headers: { "Content-Type": "application/json" }
-        }).then(() => {
-            window.location.href = "index.html";
+            headers: {
+                'Authorization': 'Bearer ' + token,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(jsonData)
         });
     }
+
+    function displayMessage(message, type) {
+        const responseMessage = document.getElementById("responseMessage");
+        responseMessage.textContent = message;
+        responseMessage.style.color = type === "success" ? "green" : "red";
+    }
+
 </script>
 </body>
 </html>
