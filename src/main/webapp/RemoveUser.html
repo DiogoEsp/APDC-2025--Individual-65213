@@ -111,9 +111,13 @@
                 body: JSON.stringify({ other: usernameToRemove })
             });
 
+            resultDiv.style.display = "block";
+
             switch (response.status) {
                 case 200:
                     resultDiv.innerHTML = "<p>✅ Attributes changed successfully.</p>";
+                    form.style.display = "none";
+                    form.reset();
                     break;
                 case 400:
                     resultDiv.innerHTML = "<p>⚠️ Bad Request: Please check the fields and try again.</p>";
@@ -129,7 +133,7 @@
                     break;
                 default:
                     const text = await response.text();
-                    resultDiv.innerHTML = `<p>❌ Unexpected Error (${response.status}): ${text}</p>`;
+                    resultDiv.innerHTML = "<p>Error: " + text + "</p>";
             }
         } catch (error) {
             result.innerText = 'Request failed: ' + error.message;

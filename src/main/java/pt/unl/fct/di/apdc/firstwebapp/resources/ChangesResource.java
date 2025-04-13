@@ -213,9 +213,9 @@ public class ChangesResource {
     @POST
     @Path("/AccountAttrib")
     @Consumes(MediaType.APPLICATION_JSON)
-    public Response changeAttribs(@Context HttpHeaders headers, ChangeAttribsData data){
+    public Response changeAttribs(@Context HttpHeaders headers, ChangeAttribsData data) {
 
-        //gets the authorization header
+        // Get the Authorization header
         String authHeader = headers.getHeaderString("Authorization");
 
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
@@ -231,51 +231,57 @@ public class ChangesResource {
 
         Key tokenKey = datastore.newKeyFactory().setKind("AuthToken").newKey(tokenID);
         Entity token = datastore.get(tokenKey);
-        Key userKey = datastore.newKeyFactory().setKind("User").newKey(token.getString("username"));
+        String requesterUsername = token.getString("username");
+        Key userKey = datastore.newKeyFactory().setKind("User").newKey(requesterUsername);
 
-        Key otherKey = datastore.newKeyFactory().setKind("User").newKey(data.other);
-
-        if(!PermissionChecker.isActive(user))
-            return Response.status(Response.Status.FORBIDDEN).build();
-
-        if(datastore.get(otherKey) == null && data.other != null){
-            return Response.status(Response.Status.NOT_FOUND).build();
-        }
-
-        try{
+        try {
             Key theKey;
+            Entity theUser;
 
+            if (data.other != null && !data.other.isEmpty()) {
+                // Editing another user
+                Key otherKey = datastore.newKeyFactory().setKind("User").newKey(data.other);
+                theUser = datastore.get(otherKey);
 
-            if(data.other == null)
-                theKey = userKey;
-            else{
+                if (theUser == null) {
+                    return Response.status(Response.Status.NOT_FOUND).build();
+                }
+
                 theKey = otherKey;
+            } else {
+                // Editing self
+                theUser = datastore.get(userKey);
+                theKey = userKey;
             }
-            Entity theUser = datastore.get(theKey);
 
+            // Build the updated entity with preserved and modified values
             Entity updatedUser = Entity.newBuilder(theKey)
                     .set("user_userName", theUser.getString("user_userName"))
-                    .set("user_name", ((data.name != null && !data.name.equals(EMPTY) ) ? data.name : theUser.getString("user_name")))
-                    .set("user_email", ((data.email != null && !data.email.equals(EMPTY) ) ? data.email : theUser.getString("user_email")))
-                    .set("user_profile", ((data.profile != null && !data.profile.equals(EMPTY) ) ? data.profile : theUser.getString("user_profile")))
-                    .set("user_role", ((data.role != null && !data.role.equals(EMPTY) ) ? data.role.toUpperCase() : theUser.getString("user_role")))
-                    .set("user_account_state", ((data.state != null && !data.state.equals(EMPTY) ) ? data.state.toUpperCase() : theUser.getString("user_account_state")))
-                    .set("address", ((data.address != null && !data.address.equals(EMPTY) ) ? data.address : theUser.getString("address")))
-                    .set("cc", ((data.cc != null && !data.cc.equals(EMPTY) )? data.cc : theUser.getString("cc")))
-                    .set("NIF", ((data.NIF != null && !data.NIF.equals(EMPTY) )? data.NIF : theUser.getString("NIF")))
-                    .set("employer", ((data.employer != null && !data.employer.equals(EMPTY) )? data.employer : theUser.getString("employer")))
-                    .set("function", ((data.function != null && !data.function.equals(EMPTY) )? data.function : theUser.getString("function")))
+                    .set("user_name", getOrDefault(data.name, theUser, "user_name"))
+                    .set("user_pwd", theUser.getString("user_pwd"))
+                    .set("user_email", getOrDefault(data.email, theUser, "user_email"))
+                    .set("user_profile", getOrDefault(data.profile, theUser, "user_profile"))
+                    .set("user_role", getOrDefault(data.role, theUser, "user_role"))
+                    .set("user_account_state", getOrDefault(data.state, theUser, "user_account_state"))
+                    .set("address", getOrDefault(data.address, theUser, "address"))
+                    .set("cc", getOrDefault(data.cc, theUser, "cc"))
+                    .set("NIF", getOrDefault(data.NIF, theUser, "NIF"))
+                    .set("employer", getOrDefault(data.employer, theUser, "employer"))
+                    .set("function", getOrDefault(data.function, theUser, "function"))
                     .build();
-
 
             datastore.put(updatedUser);
             return Response.ok().build();
-        }
-        catch(DatastoreException e){
+        } catch (DatastoreException e) {
             LOG.log(Level.SEVERE, e.toString());
             return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(e.getReason()).build();
         }
     }
+
+    private String getOrDefault(String input, Entity source, String attrName) {
+        return (input != null && !input.equals(EMPTY)) ? input : source.getString(attrName);
+    }
+
 
     @POST
     @Path("/password")

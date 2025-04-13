@@ -63,8 +63,11 @@
     <p id="success" style="color:green;"></p>
 </div>
 
+<div id="result" style="display:none; margin-top:20px;"></div>
+
 <script>
     const form = document.getElementById("changePwdForm");
+    const resultDiv = document.getElementById("result");
 
     form.addEventListener("submit", async function (e) {
         e.preventDefault();
@@ -75,7 +78,7 @@
 
         const token = sessionStorage.getItem("token");
 
-        const response = await fetch("/rest/changes/changePwd", {
+        const response = await fetch("/rest/changes/password", {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
@@ -88,9 +91,13 @@
             })
         });
 
+        resultDiv.style.display = "block";
+
         switch (response.status) {
             case 200:
                 resultDiv.innerHTML = "<p>✅ Attributes changed successfully.</p>";
+                form.style.display = "none";
+                form.reset();
                 break;
             case 400:
                 resultDiv.innerHTML = "<p>⚠️ Bad Request: Please check the fields and try again.</p>";
@@ -99,14 +106,14 @@
                 resultDiv.innerHTML = "<p>🔒 Unauthorized: Your session may have expired. Please log in again.</p>";
                 break;
             case 403:
-                resultDiv.innerHTML = "<p>⛔ Forbidden: You don't have permission to perform this action due to lack of permissions or because ur account is not active..</p>";
+                resultDiv.innerHTML = "<p>⛔ Forbidden: You don't have permission to perform this action.</p>";
                 break;
             case 404:
                 resultDiv.innerHTML = "<p>🔍 Not Found: The specified user or resource could not be found.</p>";
                 break;
             default:
                 const text = await response.text();
-                resultDiv.innerHTML = `<p>❌ Unexpected Error (${response.status}): ${text}</p>`;
+                resultDiv.innerHTML = "<p>Error: " + text + "</p>";
         }
     });
 
