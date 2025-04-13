@@ -234,6 +234,9 @@ public class ChangesResource {
         String requesterUsername = token.getString("username");
         Key userKey = datastore.newKeyFactory().setKind("User").newKey(requesterUsername);
 
+        if(!PermissionChecker.isActive(user))
+            return Response.status(Response.Status.FORBIDDEN).build();
+
         try {
             Key theKey;
             Entity theUser;
@@ -301,6 +304,9 @@ public class ChangesResource {
         if (user == null) {
             return Response.status(Response.Status.UNAUTHORIZED).entity("Invalid or expired token.").build();
         }
+
+        if(!PermissionChecker.isActive(user))
+            return Response.status(Response.Status.FORBIDDEN).build();
 
         if(!data.checkConfirmation()){
             return Response.status(Response.Status.BAD_REQUEST).build();
@@ -480,7 +486,7 @@ public class ChangesResource {
         if (user == null)
             return Response.status(Response.Status.UNAUTHORIZED).entity("Invalid or expired token.").build();
 
-        if(!PermissionChecker.canCreateWorkSheet(user.getString("user_role")))
+        if(!PermissionChecker.canCreateWorkSheet(user.getString("user_role")) || !PermissionChecker.isActive(user))
             return Response.status(Response.Status.FORBIDDEN).build();
 
         if(!data.isValid())

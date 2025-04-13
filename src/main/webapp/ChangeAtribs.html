@@ -116,22 +116,36 @@
     }
 
     function applyRestrictions() {
-        const otherUser = form.other.value.trim();
-        const isEditingSelf = !otherUser || otherUser === currentUser.username;
+        enableAllInputs(); // Reset first
 
-        enableAllInputs();
+        const otherInput = form.other;
+        const otherUser = otherInput.value.trim();
+
+        // If "other" is empty, we don't restrict anything until they pick a user
+        if (!otherUser && currentUser.role !== "ENDUSER") {
+            return;
+        }
+
+        const isEditingSelf = otherUser === "" || otherUser === currentUser.username;
 
         if (currentUser.role === "ENDUSER") {
+            // ENDUSER can only edit themselves
+            otherInput.disabled = true;
+
             if (isEditingSelf) {
-                disableFields(["email", "name", "role", "state"]);
+                disableFields(["name", "email", "role", "state"]);
             } else {
-                disableAllInputs(); // Can't edit other users
+                disableAllInputs();
             }
         } else if (currentUser.role === "BACKOFFICE") {
+            if (!otherUser) {
+                return;
+            }
+
             if (isEditingSelf) {
-                disableAllInputs(); // Can't edit themselves
+                disableAllInputs();
             } else {
-                disableFields(["email", "role", "state"]);
+                disableFields(["email",]);
             }
         } else if (currentUser.role === "ADMIN") {
             // No restrictions

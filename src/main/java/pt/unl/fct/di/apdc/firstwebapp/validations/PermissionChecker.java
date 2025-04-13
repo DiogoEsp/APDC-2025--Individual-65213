@@ -42,6 +42,10 @@ public class PermissionChecker {
         return userRole.equals(PARTNER);
     }
 
+    public static boolean canChangeAttribs(Entity user, Entity other){
+        return user.getString("user_role").equals(BACKOFFICE) && !other.getString("user_role").equals(ADMIN);
+    }
+
 
 
 }
