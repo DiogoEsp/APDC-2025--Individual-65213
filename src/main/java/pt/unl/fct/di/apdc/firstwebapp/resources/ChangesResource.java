@@ -256,16 +256,16 @@ public class ChangesResource {
 
             Entity updatedUser = Entity.newBuilder(theKey)
                     .set("user_userName", theUser.getString("user_userName"))
-                    .set("user_name", (data.name != null ? data.name : theUser.getString("user_name")))
-                    .set("user_email", (data.email != null ? data.email : theUser.getString("user_email")))
-                    .set("user_profile", (data.profile != null ? data.profile : theUser.getString("user_profile")))
-                    .set("user_role", (data.role != null ? data.role.toUpperCase() : theUser.getString("user_role")))
-                    .set("user_account_state", (data.state != null ? data.state.toUpperCase() : theUser.getString("user_account_state")))
-                    .set("address", (data.address != null ? data.address : theUser.getString("address")))
-                    .set("cc", (data.cc != null ? data.cc : theUser.getString("cc")))
-                    .set("NIF", (data.NIF != null ? data.NIF : theUser.getString("NIF")))
-                    .set("employer", (data.employer != null ? data.employer : theUser.getString("employer")))
-                    .set("function", (data.function != null ? data.function : theUser.getString("function")))
+                    .set("user_name", ((data.name != null && !data.name.equals(EMPTY) ) ? data.name : theUser.getString("user_name")))
+                    .set("user_email", ((data.email != null && !data.email.equals(EMPTY) ) ? data.email : theUser.getString("user_email")))
+                    .set("user_profile", ((data.profile != null && !data.profile.equals(EMPTY) ) ? data.profile : theUser.getString("user_profile")))
+                    .set("user_role", ((data.role != null && !data.role.equals(EMPTY) ) ? data.role.toUpperCase() : theUser.getString("user_role")))
+                    .set("user_account_state", ((data.state != null && !data.state.equals(EMPTY) ) ? data.state.toUpperCase() : theUser.getString("user_account_state")))
+                    .set("address", ((data.address != null && !data.address.equals(EMPTY) ) ? data.address : theUser.getString("address")))
+                    .set("cc", ((data.cc != null && !data.cc.equals(EMPTY) )? data.cc : theUser.getString("cc")))
+                    .set("NIF", ((data.NIF != null && !data.NIF.equals(EMPTY) )? data.NIF : theUser.getString("NIF")))
+                    .set("employer", ((data.employer != null && !data.employer.equals(EMPTY) )? data.employer : theUser.getString("employer")))
+                    .set("function", ((data.function != null && !data.function.equals(EMPTY) )? data.function : theUser.getString("function")))
                     .build();
 
 

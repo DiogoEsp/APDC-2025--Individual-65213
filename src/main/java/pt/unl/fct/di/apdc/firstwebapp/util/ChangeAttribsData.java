@@ -19,7 +19,8 @@ public class ChangeAttribsData {
     }
 
     // Constructor
-    public ChangeAttribsData(String other, String name, String email, String profile, String role, String state,
+    public ChangeAttribsData(String other, String name, String email, String profile,
+                             String role, String state,
                              String address, String cc, String NIF, String employer, String function) {
         this.other = other;
         this.name = name;

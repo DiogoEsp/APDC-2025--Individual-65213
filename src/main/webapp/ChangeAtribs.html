@@ -50,174 +50,177 @@
 <div>
     <h2>Change Account Attributes</h2>
     <form id="changeAttributesForm">
-
-        <div id="other_user_field">
-            <label>Other User: <input type="text" name="other_username"></label><br><br>
-        </div>
-
-        <div id="username_field">
-            <label>Username: <input type="text" name="username"></label><br><br>
-        </div>
-
-        <div id="email_field">
-            <label>Email: <input type="email" name="email"></label><br><br>
-        </div>
-
-        <div id="name_field">
-            <label>Name: <input type="text" name="name"></label><br><br>
-        </div>
-
-        <div id="user_profile_field">
-            <label>Profile:
-                <select name="profile">
-                    <option value="PUBLIC">PUBLIC</option>
-                    <option value="PRIVATE">PRIVATE</option>
-                    <option value="SUSPENDED">SUSPENDED</option>
-                </select>
-            </label><br><br>
-        </div>
+        <label>Other User: <input type="text" name="other"></label><br><br>
+        <label>Name: <input type="text" name="name"></label><br><br>
+        <label>Email: <input type="email" name="email"></label><br><br>
+        <label>Profile:
+            <select name="profile">
+                <option value="PUBLIC">PUBLIC</option>
+                <option value="PRIVATE">PRIVATE</option>
+            </select>
+        </label><br><br>
+        <label>Role:
+            <select name="role">
+                <option value="ENDUSER">ENDUSER</option>
+                <option value="PARTNER">PARTNER</option>
+                <option value="BACKOFFICE">BACKOFFICE</option>
+                <option value="ADMIN">ADMIN</option>
+            </select>
+        </label><br><br>
+        <label>Account State:
+            <select name="state">
+                <option value="ACTIVATED">ACTIVATED</option>
+                <option value="SUSPENDED">SUSPENDED</option>
+                <option value="DEACTIVATED">DEACTIVATED</option>
+            </select>
+        </label><br><br>
         <label>Address: <input type="text" name="address"></label><br><br>
         <label>CC: <input type="text" name="cc"></label><br><br>
-        <label>NIF: <input type="text" name="nif"></label><br><br>
+        <label>NIF: <input type="text" name="NIF"></label><br><br>
         <label>Employer: <input type="text" name="employer"></label><br><br>
         <label>Function: <input type="text" name="function"></label><br><br>
-
-        <div id="user_role_field">
-            <label>Role:
-                <select name="role">
-                    <option value="ENDUSER">ENDUSER</option>
-                    <option value="PARTNER">PARTNER</option>
-                    <option value="BACKOFFICE">BACKOFFICE</option>
-                    <option value="ADMIN">ADMIN</option>
-                </select>
-            </label><br><br>
-        </div>
-
-        <div id="user_account_state_field">
-            <label>Account State:
-                <select name="state">
-                    <option value="ACTIVATED">ACTIVATED</option>
-                    <option value="DEACTIVATED">DEACTIVATED</option>
-                    <option value="SUSPENDED">SUSPENDED</option>
-                </select>
-            </label><br><br>
-        </div>
 
         <button type="submit">Submit Changes</button>
     </form>
     <p id="error" style="color:red;"></p>
 </div>
 
-<!-- Add the responseMessage element to display feedback -->
-<div id="responseMessage" style="display:none; margin-top:20px;"></div>
+<div id="result" style="display:none; margin-top:20px;"></div>
 
 <script>
-    document.addEventListener("DOMContentLoaded", function () {
-        // Apply role-based logic
-        applyRoleRules();
-    });
+    const form = document.getElementById("changeAttributesForm");
+    const resultDiv = document.getElementById("result");
+    let currentUser = { role: null, username: null };
 
-    async function applyRoleRules() {
+    async function fetchCurrentUserInfo() {
         const token = sessionStorage.getItem("token");
-
-        // Redirect to login page if token is missing
         if (!token) {
-            window.location.href = "login.html"; // Redirect to login page
+            window.location.href = "login.html";
             return;
         }
 
-        try {
-            const userRole = await fetchUserRole(token);
-            handleRoleVisibility(userRole);
-        } catch (error) {
-            displayMessage("Error fetching user role: " + error.message, "error");
-        }
-    }
-
-    async function fetchUserRole(token) {
-        const response = await fetch('/rest/changes/getRole', {
-            headers: { 'Authorization': 'Bearer ' + token }
+        const res = await fetch('/rest/changes/getRole', {
+            headers: {
+                'Authorization': 'Bearer ' + token
+            }
         });
 
-        if (!response.ok) {
-            throw new Error("Failed to fetch user role");
-        }
-
-        const data = await response.json();
-        return data.role;
-    }
-
-    function handleRoleVisibility(userRole) {
-        const roleField = document.getElementsByName("role")[0];  // Access the role dropdown
-        const otherUserField = document.getElementsByName("other_username")[0];  // Access the other user input
-
-        // Role-specific logic to disable or clear fields based on user role
-        if (userRole === "ENDUSER") {
-            // Disable and clear both fields
-            roleField.value = "";  // Set the role to empty
-            roleField.disabled = true;  // Make it non-editable
-            otherUserField.value = ""; // Clear the otherUser field
-            otherUserField.disabled = true; // Make it non-editable
-        } else if (userRole === "BACKOFFICE") {
-            // Disable the role field, and leave otherUser editable
-            roleField.value = "";  // Set the role to empty
-            roleField.disabled = true;  // Make it non-editable
-        }
-
-        // Show response message area
-        const responseMessage = document.getElementById("responseMessage");
-        responseMessage.style.display = "block";
-    }
-
-    document.getElementById("changeAttributesForm").addEventListener("submit", async function (event) {
-        event.preventDefault();
-
-        const token = sessionStorage.getItem("token");
-
-        if (!token) {
-            window.location.href = "login.html"; // Redirect to login page
+        if (!res.ok) {
+            window.location.href = "login.html";
             return;
         }
 
-        const formData = new FormData(this);
-        const jsonData = Object.fromEntries(formData.entries());
+        currentUser = await res.json(); // Expected { username, role }
+        applyRestrictions();
+    }
 
-        // If role is not hidden (for example, for BACKOFFICE or ADMIN), include it
-        if (document.getElementsByName("role")[0] && document.getElementsByName("role")[0].value) {
-            jsonData.role = document.getElementsByName("role")[0].value;
-        }
+    function applyRestrictions() {
+        const otherUser = form.other.value.trim();
+        const isEditingSelf = !otherUser || otherUser === currentUser.username;
 
-        // Send the request to change role
-        try {
-            const response = await sendRoleChangeRequest(token, jsonData);
-            if (response.ok) {
-                displayMessage("Role changed successfully!", "success");
+        enableAllInputs();
+
+        if (currentUser.role === "ENDUSER") {
+            if (isEditingSelf) {
+                disableFields(["email", "name", "role", "state"]);
             } else {
-                const errorText = await response.text();
-                displayMessage("Error: " + errorText, "error");
+                disableAllInputs(); // Can't edit other users
             }
-        } catch (error) {
-            displayMessage("Failed to change role: " + error.message, "error");
+        } else if (currentUser.role === "BACKOFFICE") {
+            if (isEditingSelf) {
+                disableAllInputs(); // Can't edit themselves
+            } else {
+                disableFields(["email", "role", "state"]);
+            }
+        } else if (currentUser.role === "ADMIN") {
+            // No restrictions
         }
-    });
+    }
 
-    async function sendRoleChangeRequest(token, jsonData) {
-        return await fetch('/rest/changes/role', {
+    function disableFields(names) {
+        names.forEach(name => {
+            const field = form.querySelector(`[name="${name}"]`);
+            if (field) field.disabled = true;
+        });
+    }
+
+    function enableAllInputs() {
+        [...form.elements].forEach(el => {
+            if (el.tagName === "INPUT" || el.tagName === "SELECT") {
+                el.disabled = false;
+            }
+        });
+    }
+
+    function disableAllInputs() {
+        [...form.elements].forEach(el => {
+            if (el.tagName === "INPUT" || el.tagName === "SELECT") {
+                el.disabled = true;
+            }
+        });
+    }
+
+    form.other.addEventListener("input", applyRestrictions);
+
+    form.addEventListener("submit", async function (e) {
+        e.preventDefault();
+
+        const token = sessionStorage.getItem("token");
+        if (!token) {
+            window.location.href = "login.html";
+            return;
+        }
+
+        const formData = {
+            other: e.target.other.value,
+            name: e.target.name.value,
+            email: e.target.email.value,
+            profile: e.target.profile.value,
+            role: e.target.role.value,
+            state: e.target.state.value,
+            address: e.target.address.value,
+            cc: e.target.cc.value,
+            NIF: e.target.NIF.value,
+            employer: e.target.employer.value,
+            function: e.target.function.value
+        };
+
+        const response = await fetch('/rest/changes/AccountAttrib', {
             method: 'POST',
             headers: {
-                'Authorization': 'Bearer ' + token,
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + token
             },
-            body: JSON.stringify(jsonData)
+            body: JSON.stringify(formData)
+        });
+
+        form.style.display = "none";
+
+        if (response.ok) {
+            resultDiv.innerHTML = "<p>Attributes changed successfully.</p>";
+        } else if (response.status === 401) {
+            resultDiv.innerHTML = "<p>Authentication error. Please log in again.</p>";
+        } else {
+            const text = await response.text();
+            resultDiv.innerHTML = "<p>Error: " + text + "</p>";
+        }
+
+        resultDiv.style.display = "block";
+    });
+
+    function logOut() {
+        sessionStorage.clear();
+        fetch('/rest/changes/logOut', {
+            method: 'POST',
+            headers: { "Content-Type": "application/json" }
+        }).then(() => {
+            window.location.href = "index.html";
         });
     }
 
-    function displayMessage(message, type) {
-        const responseMessage = document.getElementById("responseMessage");
-        responseMessage.textContent = message;
-        responseMessage.style.color = type === "success" ? "green" : "red";
-    }
-
+    // Fetch role and apply restrictions on page load
+    window.addEventListener("load", fetchCurrentUserInfo);
 </script>
+
 </body>
 </html>
