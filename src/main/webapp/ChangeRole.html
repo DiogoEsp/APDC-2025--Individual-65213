@@ -2,41 +2,42 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Change Account Attributes</title>
-    <style>
-        body {
-            margin: 0;
-            font-family: Arial, sans-serif;
-        }
+    <title>Change Role</title>
 
-        .navbar {
-            background-color: #333;
-            overflow: hidden;
-            padding: 0 20px;
-        }
+    <style>body {
+        margin: 0;
+        font-family: Arial, sans-serif;
+    }
 
-        .navbar a {
-            float: left;
-            display: block;
-            color: #f2f2f2;
-            text-align: center;
-            padding: 16px 20px;
-            text-decoration: none;
-            transition: background 0.3s;
-        }
+    .navbar {
+        background-color: #333;
+        overflow: hidden;
+        padding: 0 20px;
+    }
 
-        .navbar a:hover {
-            background-color: #575757;
-        }
+    .navbar a {
+        float: left;
+        display: block;
+        color: #f2f2f2;
+        text-align: center;
+        padding: 16px 20px;
+        text-decoration: none;
+        transition: background 0.3s;
+    }
 
-        .navbar .right {
-            float: right;
-        }
-    </style>
+    .navbar a:hover {
+        background-color: #575757;
+    }
+
+    .navbar .right {
+        float: right;
+    }</style>
+
 </head>
+
 <body>
 <div class="navbar">
-    <a href="index.html">Home</a>
+    <a href="index.html"> Home</a>
     <a href="ChangeRole.html">Change Role</a>
     <a href="ChangeAccountState.html">Change Account State</a>
     <a href="RemoveUser.html">Remove User</a>
@@ -46,192 +47,99 @@
     <a href="WorkSheet.html">Insert Work Sheet</a>
     <a href="#" class="right" onclick="logOut()">Log Out</a>
 </div>
-
 <div>
-    <h2>Change Account Attributes</h2>
-    <form id="changeAttributesForm">
-
-        <div id="other_user_field">
-            <label>Other User: <input type="text" name="other_username"></label><br><br>
-        </div>
-
-        <div id="username_field">
-            <label>Username: <input type="text" name="username" required></label><br><br>
-        </div>
-
-        <div id="email_field">
-            <label>Email: <input type="email" name="email" required></label><br><br>
-        </div>
-
-        <div id="name_field">
-            <label>Name: <input type="text" name="name" required></label><br><br>
-        </div>
-
-        <div id="user_profile_field">
-            <label>Profile:
-                <select name="profile">
-                    <option value="PUBLIC">PUBLIC</option>
-                    <option value="PRIVATE">PRIVATE</option>
-                    <option value="SUSPENDED">SUSPENDED</option>
-                </select>
-            </label><br><br>
-        </div>
-        <label>Address: <input type="text" name="address"></label><br><br>
-        <label>CC: <input type="text" name="cc"></label><br><br>
-        <label>NIF: <input type="text" name="nif"></label><br><br>
-        <label>Employer: <input type="text" name="employer"></label><br><br>
-        <label>Function: <input type="text" name="function"></label><br><br>
-
-        <div id="user_role_field">
-            <label>Role:
-                <select name="role">
-                    <option value="ENDUSER">ENDUSER</option>
-                    <option value="PARTNER">PARTNER</option>
-                    <option value="BACKOFFICE">BACKOFFICE</option>
-                    <option value="ADMIN">ADMIN</option>
-                </select>
-            </label><br><br>
-        </div>
-
-        <div id="user_account_state_field">
-            <label>Account State:
-                <select name="state">
-                    <option value="ACTIVATED">ACTIVATED</option>
-                    <option value="DEACTIVATED">DEACTIVATED</option>
-                    <option value="SUSPENDED">SUSPENDED</option>
-                </select>
-            </label><br><br>
-        </div>
-
-        <button type="submit">Submit Changes</button>
+    <h2>Change Role</h2>
+    <form id="changeRoleForm">
+        <label>Username: <input type="text" name="username" required></label><br><br>
+        <label>Account Role:
+            <select name="role" required>
+                <option value="ADMIN">ADMIN</option>
+                <option value="BACKOFFICE">BACKOFFICE</option>
+                <option value="PARTNER">PARTNER</option>
+                <option value="ENDUSER">ENDUSER</option>
+            </select>
+        </label><br><br>
+        <button type="submit">Change</button>
     </form>
     <p id="error" style="color:red;"></p>
 </div>
 
-<!-- Add the responseMessage element to display feedback -->
-<div id="responseMessage" style="display:none; margin-top:20px;"></div>
+<div id="result" style="display:none; margin-top:20px;"></div>
 
 <script>
-    document.addEventListener("DOMContentLoaded", function () {
-        applyRoleRules();
-    });
 
-    async function applyRoleRules() {
+    const form = document.getElementById("changeRoleForm");
+    const resultDiv = document.getElementById("result");
+
+    document.getElementById('changeRoleForm').addEventListener('submit', async function (e) {
+        e.preventDefault();
+        console.log("form script triggered");
+
+        const formData = {
+            username: e.target.username.value,
+            role: e.target.role.value
+        };
         const token = sessionStorage.getItem("token");
 
-        if (!token) {
-            window.location.href = "login.html";
-            return;
-        }
-
-        try {
-            const userRole = await fetchUserRole(token);
-            handleRoleVisibility(userRole);
-        } catch (error) {
-            displayMessage("Error fetching user role: " + error.message, "error");
-        }
-    }
-
-    async function fetchUserRole(token) {
-        const response = await fetch('/rest/changes/getRole', {
-            headers: { 'Authorization': 'Bearer ' + token }
-        });
-
-        if (!response.ok) {
-            throw new Error("Failed to fetch user role");
-        }
-
-        const data = await response.json();
-        return data.role;
-    }
-
-    function handleRoleVisibility(userRole) {
-        const roleField = document.getElementsByName("role")[0];  // Access the role dropdown
-        const otherUserField = document.getElementsByName("other_username")[0];  // Access the other user input
-
-        // Role-specific logic to disable or clear fields based on user role
-        if (userRole === "ENDUSER") {
-            // Disable and set fields to null
-            roleField.value = null;  // Set the role to null
-            roleField.disabled = true;  // Make it non-editable
-            otherUserField.value = null; // Clear the otherUser field
-            otherUserField.disabled = true; // Make it non-editable
-        } else if (userRole === "BACKOFFICE") {
-            // Disable role field only
-            roleField.disabled = true;  // Make it non-editable
-        }
-
-        // Show response message area
-        const responseMessage = document.getElementById("responseMessage");
-        responseMessage.style.display = "block";
-    }
-
-    document.getElementById("changeAttributesForm").addEventListener("submit", async function (event) {
-        event.preventDefault();
-
-        const token = sessionStorage.getItem("token");
-
-        if (!token) {
-            window.location.href = "login.html"; // Redirect to login page
-            return;
-        }
-
-        const formData = new FormData(this);
-        const jsonData = Object.fromEntries(formData.entries());
-
-        // Set fields to null if they are disabled (as per the role restrictions)
-        if (document.getElementsByName("role")[0].disabled) {
-            jsonData.role = null;
-        }
-        if (document.getElementsByName("other_username")[0].disabled) {
-            jsonData.other_username = null;
-        }
-
-        // Send the request to change attributes
-        try {
-            const response = await sendRoleChangeRequest(token, jsonData);
-            switch (response.status) {
-                case 200:
-                    resultDiv.innerHTML = "<p>✅ Attributes changed successfully.</p>";
-                    break;
-                case 400:
-                    resultDiv.innerHTML = "<p>⚠️ Bad Request: Please check the fields and try again.</p>";
-                    break;
-                case 401:
-                    resultDiv.innerHTML = "<p>🔒 Unauthorized: Your session may have expired. Please log in again.</p>";
-                    break;
-                case 403:
-                    resultDiv.innerHTML = "<p>⛔ Forbidden: You don't have permission to perform this action due to lack of permissions or because ur account is not active.</p>";
-                    break;
-                case 404:
-                    resultDiv.innerHTML = "<p>🔍 Not Found: The specified user or resource could not be found.</p>";
-                    break;
-                default:
-                    const text = await response.text();
-                    resultDiv.innerHTML = `<p>❌ Unexpected Error (${response.status}): ${text}</p>`;
-            }
-        } catch (error) {
-            displayMessage("Failed to update account attributes: " + error.message, "error");
-        }
-    });
-
-    async function sendRoleChangeRequest(token, jsonData) {
-        return await fetch('/rest/changes/attributes', {
+        const response = await fetch('/rest/changes/userRole', {
             method: 'POST',
-            headers: {
-                'Authorization': 'Bearer ' + token,
-                'Content-Type': 'application/json'
+            headers: { 'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + token // or token if it's just the string
             },
-            body: JSON.stringify(jsonData)
+            body: JSON.stringify(formData)
         });
-    }
 
-    function displayMessage(message, type) {
-        const responseMessage = document.getElementById("responseMessage");
-        responseMessage.textContent = message;
-        responseMessage.style.color = type === "success" ? "green" : "red";
+        form.style.display = "none";
+
+        if (response.ok) {
+            resultDiv.innerHTML = `
+            <p>Operation done with success</p>
+        `;
+            resultDiv.style.display = "block";
+        }
+        switch (response.status) {
+            case 200:
+                resultDiv.innerHTML = "<p>✅ Attributes changed successfully.</p>";
+                break;
+            case 400:
+                resultDiv.innerHTML = "<p>⚠️ Bad Request: Please check the fields and try again.</p>";
+                break;
+            case 401:
+                resultDiv.innerHTML = "<p>🔒 Unauthorized: Your session may have expired. Please log in again.</p>";
+                break;
+            case 403:
+                resultDiv.innerHTML = "<p>⛔ Forbidden: You don't have permission to perform this action.</p>";
+                break;
+            case 404:
+                resultDiv.innerHTML = "<p>🔍 Not Found: The specified user or resource could not be found.</p>";
+                break;
+            default:
+                const text = await response.text();
+                resultDiv.innerHTML = `<p>❌ Unexpected Error (${response.status}): ${text}</p>`;
+        }
+    });
+
+
+    function logOut() {
+        sessionStorage.clear();
+
+        fetch('/rest/changes/logOut', {
+            method: 'POST',
+            headers: { "Content-Type": "application/json" }
+        })
+            .then(response => {
+                if (response.ok) {
+                    console.log("Logged out successfully.");
+                } else {
+                    console.log("Error logging out.");
+                }
+            })
+            .catch(error => console.error('Logout error:', error));
+
+        window.location.href = "index.html";
     }
 
 </script>
+
 </body>
 </html>

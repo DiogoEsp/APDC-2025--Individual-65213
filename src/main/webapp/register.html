@@ -13,7 +13,13 @@
     <input type="password" id="confirmation" placeholder="confirm password"><br>
     <input type="email" id="email" placeholder="Email" required><br>
     <input type="text" id="name" placeholder="Full Name"><br>
-    <input type="text" id="profile" placeholder="profile"><br>
+    <label>Profile:
+        <select name="profile" id="profile">
+            <option value="PUBLIC">PUBLIC</option>
+            <option value="SUSPENDED"> SUSPENDED</option>
+            <option value="PRIVATE">PRIVATE</option>
+        </select>
+    </label><br><br>
     <button type="submit">Register</button>
 </form>
 
