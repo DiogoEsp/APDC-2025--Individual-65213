@@ -118,11 +118,26 @@
             const resultDiv = document.getElementById("result");
             const resultMessage = document.getElementById("resultMessage");
 
-            if (response.ok) {
-                resultMessage.innerHTML = "Operation completed successfully!";
-            } else {
-                resultMessage.innerHTML = "Error: " + (response.status === 401 ? "Login issue" : "Something went wrong.");
-            }
+        switch (response.status) {
+            case 200:
+                resultDiv.innerHTML = "<p>✅ Attributes changed successfully.</p>";
+                break;
+            case 400:
+                resultDiv.innerHTML = "<p>⚠️ Bad Request: Please check the fields and try again.</p>";
+                break;
+            case 401:
+                resultDiv.innerHTML = "<p>🔒 Unauthorized: Your session may have expired. Please log in again.</p>";
+                break;
+            case 403:
+                resultDiv.innerHTML = "<p>⛔ Forbidden: You don't have permission to perform this action.</p>";
+                break;
+            case 404:
+                resultDiv.innerHTML = "<p>🔍 Not Found: The specified user or resource could not be found.</p>";
+                break;
+            default:
+                const text = await response.text();
+                resultDiv.innerHTML = `<p>❌ Unexpected Error (${response.status}): ${text}</p>`;
+        }
             resultDiv.style.display = "block";  // Show the result message
     });
 </script>

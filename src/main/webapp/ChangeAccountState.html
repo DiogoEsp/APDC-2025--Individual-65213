@@ -90,25 +90,25 @@
 
         form.style.display = "none";
 
-        if (response.ok) {
-            resultDiv.innerHTML = `
-            <p>Operation done with success</p>
-        `;
-            resultDiv.style.display = "block";
-        }
-        else{
-            if(response.status == 401){
-                resultDiv.innerHTML = `
-            <p>something wth login</p>
-        `;
-                resultDiv.style.display = "block";
-            }
-            else{
-                resultDiv.innerHTML = `
-            <p>idk what went wrong</p>
-        `;
-                resultDiv.style.display = "block";
-            }
+        switch (response.status) {
+            case 200:
+                resultDiv.innerHTML = "<p>✅ Attributes changed successfully.</p>";
+                break;
+            case 400:
+                resultDiv.innerHTML = "<p>⚠️ Bad Request: Please check the fields and try again.</p>";
+                break;
+            case 401:
+                resultDiv.innerHTML = "<p>🔒 Unauthorized: Your session may have expired. Please log in again.</p>";
+                break;
+            case 403:
+                resultDiv.innerHTML = "<p>⛔ Forbidden: You don't have permission to perform this action due to lack of permissions or because ur account is not active..</p>";
+                break;
+            case 404:
+                resultDiv.innerHTML = "<p>🔍 Not Found: The specified user or resource could not be found.</p>";
+                break;
+            default:
+                const text = await response.text();
+                resultDiv.innerHTML = `<p>❌ Unexpected Error (${response.status}): ${text}</p>`;
         }
     });
 

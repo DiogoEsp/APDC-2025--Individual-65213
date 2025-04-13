@@ -61,7 +61,7 @@ public class ChangesResource {
         if(data.role == null || data.username == null)
             return Response.status(Response.Status.BAD_REQUEST).build();
 
-        if(!PermissionChecker.canChangeRole(userRole,data))
+        if(!PermissionChecker.canChangeRole(userRole,data) || !PermissionChecker.isActive(user))
             return Response.status(Response.Status.FORBIDDEN).build();
 
         try{
@@ -118,14 +118,13 @@ public class ChangesResource {
         }
 
 
-        if(data.state == null || !data.validState()){
-            LOG.info("Null or not valid state");
+        if(data.state == null || data.username == null){
             return Response.status(Response.Status.BAD_REQUEST).build();
         }
 
         String userRole = user.getString("user_role");
 
-        if (!PermissionChecker.canChangeStatus(userRole, data)) {
+        if (!PermissionChecker.canChangeStatus(userRole, data) || !PermissionChecker.isActive(user)) {
             return Response.status(Response.Status.FORBIDDEN).build();
         }
 
@@ -170,7 +169,6 @@ public class ChangesResource {
     @Consumes(MediaType.APPLICATION_JSON)
     public Response removeUserAccount(@Context HttpHeaders headers, RemUserData data){
 
-        //gets the authorization header
         String authHeader = headers.getHeaderString("Authorization");
 
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
@@ -192,14 +190,12 @@ public class ChangesResource {
             Entity other = datastore.get(otherKey);
 
             if(other == null){
-                LOG.info("User does not exist.");
                 return Response.status(Response.Status.NOT_FOUND).build();
             }
 
             String otherRole = other.getString("user_role");
 
-            if (!PermissionChecker.canRemUser(userRole, otherRole)) {
-                LOG.info("Nonono you dont have permission for that");
+            if (!PermissionChecker.canRemUser(userRole, otherRole) || !PermissionChecker.isActive(user)) {
                 return Response.status(Response.Status.FORBIDDEN).build();
             }
 
@@ -239,7 +235,10 @@ public class ChangesResource {
 
         Key otherKey = datastore.newKeyFactory().setKind("User").newKey(data.other);
 
-        if(data.other != null && datastore.get(otherKey) == null){
+        if(!PermissionChecker.isActive(user))
+            return Response.status(Response.Status.FORBIDDEN).build();
+
+        if(datastore.get(otherKey) == null && data.other != null){
             return Response.status(Response.Status.NOT_FOUND).build();
         }
 
@@ -393,6 +392,9 @@ public class ChangesResource {
             return Response.status(Response.Status.UNAUTHORIZED).entity("Invalid or expired token.").build();
         }
 
+        if(!PermissionChecker.isActive(requester))
+            return Response.status(Response.Status.FORBIDDEN).build();
+
         String userRole = requester.getString("user_role");
         List<Entity> entities = new ArrayList<>();
 
@@ -506,14 +508,5 @@ public class ChangesResource {
         }
     }
 
-
-    private String getOrDefault(Entity user, String property) {
-        if(user.getString(property) == null){
-            return "NOT DEFINED";
-        }
-        else{
-            return user.getString(property);
-        }
-    }
 
 }
